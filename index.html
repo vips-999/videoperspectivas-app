@@ -1,13 +1,1690 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <title>Aura 3D Web Animator - Transforme seu Site em Vídeo 3D</title>
+    <!-- Tailwind CSS v3/v4 Play CDN para estilo responsivo e rápido -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fontes do Google Premium -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Configuração de fontes do Tailwind -->
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      .font-display {
+        font-family: 'Space Grotesk', sans-serif;
+      }
+      .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+      /* Custom shadow and glassy panels */
+      .glass-panel {
+        background: rgba(13, 16, 27, 0.7);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .scrollbar-none::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-none {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      /* Estilo dos inputs range para ficarem finos e elegantes */
+      input[type="range"] {
+        height: 6px;
+        border-radius: 999px;
+      }
+    </style>
   </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+  <body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col overflow-x-hidden select-none">
+    
+    <!-- HEADER BAR -->
+    <header class="border-b border-white/5 bg-slate-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-40" id="header-bar">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/10">
+          <!-- Ícone do Lucide (Injetado via JS) -->
+          <i data-lucide="film" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-display text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+            Aura 3D Web Animator
+          </h1>
+          <p class="text-[10px] font-mono tracking-wider text-slate-500 uppercase">
+            Site estático de alta performance rodando 100% puro no navegador
+          </p>
+        </div>
+      </div>
+
+      <!-- Ações do topo -->
+      <div class="flex items-center gap-3">
+        <button 
+          id="btn-reset"
+          class="px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 rounded-lg border border-white/5 transition flex items-center gap-2 cursor-pointer"
+          title="Resetar aos padrões de fábrica"
+        >
+          <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Redefinir</span>
+        </button>
+        
+        <button
+          id="btn-gemini"
+          class="px-4 py-1.5 text-xs font-bold leading-normal text-white bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-500 rounded-lg shadow-lg shadow-indigo-600/20 active:scale-[0.98] transition flex items-center gap-2 cursor-pointer border border-indigo-400/20"
+        >
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-300 fill-amber-300"></i>
+          <span id="gemini-btn-text">Otimizar com Gemini IA</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- NOTIFICATION HUD BANNER -->
+    <div id="notification-banner" class="hidden bg-indigo-950/90 border-b border-indigo-500/20 px-6 py-2.5 flex items-center gap-3 animate-fade-in z-30 relative justify-between text-xs font-medium text-indigo-200">
+      <div class="flex items-center gap-2 max-w-[90%] truncate">
+        <i data-lucide="info" class="w-4 h-4 text-indigo-400 shrink-0"></i>
+        <span id="notification-text" class="truncate">Carregando aplicação...</span>
+      </div>
+      <button 
+        id="notification-close"
+        class="text-indigo-400 hover:text-indigo-200 cursor-pointer font-bold px-2 py-0.5 rounded"
+      >
+        OK
+      </button>
+    </div>
+
+    <!-- WORKSPACE -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden" id="workspace-container">
+      
+      <!-- ESQUERDA: BARRA LATERAL DE CONTROLES (lg:col-span-4) -->
+      <section class="lg:col-span-4 border-r border-white/5 flex flex-col h-[calc(100vh-73px)] overflow-hidden bg-slate-950/40" id="sidebar-controls">
+        
+        <!-- Upload de screenshot -->
+        <div class="p-5 border-b border-white/5" id="screenshot-upload-container">
+          <label class="text-[11px] font-mono tracking-widest text-slate-500 block uppercase mb-3">
+            1. Captura do seu Website
+          </label>
+
+          <!-- Upload Drag & Drop -->
+          <div 
+            id="drop-area"
+            class="border-2 border-dashed border-white/10 hover:border-indigo-500/40 bg-white/[0.01] hover:bg-white/[0.02] p-4 rounded-xl text-center cursor-pointer transition relative group overflow-hidden"
+          >
+            <input 
+              id="file-input"
+              type="file" 
+              accept="image/*" 
+              class="hidden" 
+            />
+            <div class="flex flex-col items-center gap-2">
+              <div class="w-10 h-10 rounded-lg bg-white/[0.03] group-hover:bg-indigo-500/10 flex items-center justify-center border border-white/5 group-hover:border-indigo-500/20 transition-all duration-300">
+                <i data-lucide="upload" class="w-5 h-5 text-slate-400 group-hover:text-indigo-400"></i>
+              </div>
+              <div class="text-xs">
+                <span class="font-semibold text-slate-200">Arraste um print inteiro</span> ou <span class="text-indigo-400 font-semibold group-hover:underline">clique para subir</span>
+              </div>
+              <p class="text-[10px] text-slate-500">
+                Imagens longas horizontais ou verticais em PNG, JPG ou JPEG
+              </p>
+            </div>
+          </div>
+
+          <!-- Status do Site Atual -->
+          <div class="mt-3 flex items-center justify-between text-xs text-slate-400 p-2.5 rounded-lg bg-white/5 border border-white/5">
+            <span class="flex items-center gap-1.5 font-medium truncate">
+              <i data-lucide="file-text" class="w-3.5 h-3.5 text-indigo-400"></i>
+              Site: <span id="active-filename" class="text-slate-200 max-w-[140px] truncate">Mockup Aura SaaS</span>
+            </span>
+            <button 
+              id="btn-restore-mockup"
+              class="text-[10px] text-indigo-400 hover:text-indigo-300 hover:underline font-mono"
+            >
+              Usar Mockup Padrão
+            </button>
+          </div>
+        </div>
+
+        <!-- TABS DE MENU -->
+        <div class="flex border-b border-white/5 text-xs font-semibold bg-slate-950/20 shrink-0 select-none">
+          <button
+            id="tab-btn-move"
+            class="flex-1 py-3 text-center transition flex justify-center items-center gap-2 text-indigo-400 border-b-2 border-indigo-500 bg-indigo-500/[0.02]"
+          >
+            <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+            <span>Movimentos</span>
+          </button>
+          <button
+            id="tab-btn-design"
+            class="flex-1 py-3 text-center transition flex justify-center items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/[0.01]"
+          >
+            <i data-lucide="palette" class="w-3.5 h-3.5"></i>
+            <span>Cenário & Design</span>
+          </button>
+          <button
+            id="tab-btn-text"
+            class="flex-1 py-3 text-center transition flex justify-center items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/[0.01]"
+          >
+            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+            <span>Textos / Títulos</span>
+          </button>
+        </div>
+
+        <!-- ABA DE CONFIGURAÇÕES CONTEÚDO SCROLL -->
+        <div class="flex-1 overflow-y-auto p-5 space-y-6 scrollbar-none" id="sidebar-tab-content">
+          
+          <!-- SEÇÃO ABA MOVIMENTOS -->
+          <div id="section-move" class="space-y-5">
+            <div>
+              <label class="text-[10px] font-mono tracking-widest text-slate-500 block uppercase mb-2">
+                Predefinições Cinematográficas 3D
+              </label>
+              <div class="grid grid-cols-2 gap-2" id="cinematic-preset-grid">
+                <button data-preset="scroll" class="p-3 rounded-xl text-left transition select-none flex flex-col gap-0.5 group border bg-white/[0.01] hover:bg-white/[0.03] border-white/5 text-slate-400">
+                  <span class="text-[11px] font-mono tracking-wider text-slate-500">SCROLL</span>
+                  <span class="text-xs font-semibold leading-none truncate mt-0.5">Rolagem Contínua</span>
+                </button>
+                <button data-preset="orbit" class="p-3 rounded-xl text-left transition select-none flex flex-col gap-0.5 group border bg-white/[0.01] hover:bg-white/[0.03] border-white/5 text-slate-400">
+                  <span class="text-[11px] font-mono tracking-wider text-slate-500">ORBIT</span>
+                  <span class="text-xs font-semibold leading-none truncate mt-0.5">Órbita Orbital</span>
+                </button>
+                <button data-preset="zoom" class="p-3 rounded-xl text-left transition select-none flex flex-col gap-0.5 group border bg-white/[0.01] hover:bg-white/[0.03] border-white/5 text-slate-400">
+                  <span class="text-[11px] font-mono tracking-wider text-slate-500">ZOOM</span>
+                  <span class="text-xs font-semibold leading-none truncate mt-0.5">Zoom Hero</span>
+                </button>
+                <button data-preset="wobble" class="p-3 rounded-xl text-left transition select-none flex flex-col gap-0.5 group border bg-indigo-500/10 border-indigo-500/40 text-rose-50 font-bold">
+                  <span class="text-[11px] font-mono tracking-wider text-indigo-400">WOBBLE</span>
+                  <span class="text-xs font-semibold leading-none truncate mt-0.5">Flutuar Balanço</span>
+                </button>
+                <button data-preset="reveal" class="p-3 rounded-xl text-left transition select-none flex flex-col gap-0.5 group border bg-white/[0.01] hover:bg-white/[0.03] border-white/5 text-slate-400">
+                  <span class="text-[11px] font-mono tracking-wider text-slate-500">REVEAL</span>
+                  <span class="text-xs font-semibold leading-none truncate mt-0.5">Revelação Zoom</span>
+                </button>
+                <button data-preset="manual" class="p-3 rounded-xl text-left transition select-none flex flex-col gap-0.5 group border bg-white/[0.01] hover:bg-white/[0.03] border-white/5 text-slate-400">
+                  <span class="text-[11px] font-mono tracking-wider text-slate-500">MANUAL</span>
+                  <span class="text-xs font-semibold leading-none truncate mt-0.5">Ângulo Livre</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- CONTROLE DE MÉTRICAS -->
+            <div class="space-y-4 pt-3 border-t border-white/5">
+              <label class="text-[10px] font-mono tracking-widest text-slate-500 block uppercase">
+                Métricas de Gravação & Câmera
+              </label>
+
+              <!-- Duração -->
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-400 font-medium">Duração do Vídeo</span>
+                  <span id="label-duration" class="font-mono text-indigo-400 font-bold">12 segundos</span>
+                </div>
+                <input id="input-duration" type="range" min="3" max="30" step="1" value="12" class="w-full h-1.5 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
+                <div class="flex items-center justify-between text-[10px] text-slate-500">
+                  <span>3s (Mídia Rápida)</span>
+                  <span>30s (Anúncio Promocional)</span>
+                </div>
+              </div>
+
+              <!-- Velocidade -->
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-400 font-medium">Velocidade da Animação</span>
+                  <span id="label-speed" class="font-mono text-indigo-400 font-bold">1.0x</span>
+                </div>
+                <input id="input-speed" type="range" min="0.2" max="2.5" step="0.1" value="1.0" class="w-full h-1.5 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
+              </div>
+
+              <!-- Escala do dispositivo -->
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-400 font-medium">Escala / Tamanho do Mockup</span>
+                  <span id="label-scale" class="font-mono text-indigo-400 font-bold">1.15x</span>
+                </div>
+                <input id="input-scale" type="range" min="0.6" max="2.0" step="0.05" value="1.15" class="w-full h-1.5 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
+              </div>
+
+              <!-- Curvatura do mockup -->
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-400 font-medium">Curvatura Isométrica</span>
+                  <span id="label-curve" class="font-mono text-indigo-400 font-bold">80%</span>
+                </div>
+                <input id="input-curve" type="range" min="0.0" max="2.0" step="0.1" value="0.8" class="w-full h-1.5 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
+                <div class="flex items-center justify-between text-[10px] text-slate-500">
+                  <span>Fino/Plano</span>
+                  <span>Display Curvado Premium</span>
+                </div>
+              </div>
+
+              <!-- CONTROLE MANUAL OFFSET DE CÂMERA -->
+              <div id="manual-controls-panel" class="space-y-3 pt-3 p-3 rounded-lg bg-white/[0.02] border border-white/5 opacity-65 transition-all">
+                <div class="flex items-center gap-2 text-[11px] font-semibold text-slate-300">
+                  <i data-lucide="camera" class="w-3.5 h-3.5 text-indigo-400"></i>
+                  <span>Controles de Altura e Rotação Manual</span>
+                </div>
+
+                <!-- Pitch -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Ângulo de Olhar Superior (Pitch)</span>
+                    <span id="label-pitch" class="font-mono">45°</span>
+                  </div>
+                  <input id="input-pitch" type="range" min="-90" max="90" step="1" value="45" class="w-full h-1 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
+                </div>
+
+                <!-- Roll -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Torção Diagonal (Roll)</span>
+                    <span id="label-roll" class="font-mono">15°</span>
+                  </div>
+                  <input id="input-roll" type="range" min="-45" max="45" step="1" value="15" class="w-full h-1 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SEÇÃO ABA DESIGN -->
+          <div id="section-design" class="space-y-5 hidden">
+            <!-- GRADIENT SELECTION -->
+            <div class="space-y-4">
+              <label class="text-[10px] font-mono tracking-widest text-slate-500 block uppercase">
+                Fundo do Cenário (Gradientes)
+              </label>
+
+              <div class="flex items-center gap-3">
+                <div class="flex-1 space-y-1">
+                  <span class="text-[11px] text-slate-400 font-medium">Gradiente Início</span>
+                  <div class="flex items-center gap-2">
+                    <input id="input-col-start" type="color" value="#0d0d15" class="w-8 h-8 rounded border border-white/10 cursor-pointer bg-transparent" />
+                    <input id="input-col-start-text" type="text" value="#0D0D15" class="w-full bg-slate-900 border border-white/5 text-xs px-2 py-1.5 rounded font-mono text-slate-200" />
+                  </div>
+                </div>
+
+                <div class="flex-1 space-y-1">
+                  <span class="text-[11px] text-slate-400 font-medium">Gradiente Fim</span>
+                  <div class="flex items-center gap-2">
+                    <input id="input-col-end" type="color" value="#1e1039" class="w-8 h-8 rounded border border-white/10 cursor-pointer bg-transparent" />
+                    <input id="input-col-end-text" type="text" value="#1E1039" class="w-full bg-slate-900 border border-white/5 text-xs px-2 py-1.5 rounded font-mono text-slate-200" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Swatches -->
+              <div>
+                <span class="text-[11px] text-slate-500 font-medium block mb-1.5">Modelos de Cores Rápidas</span>
+                <div class="flex flex-wrap gap-2" id="quick-gradient-swatches">
+                  <button data-start="#090910" data-end="#1a0c30" class="px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer font-medium">Obsidiana Neon</button>
+                  <button data-start="#040b0e" data-end="#062624" class="px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer font-medium">Aura Verde</button>
+                  <button data-start="#020205" data-end="#111827" class="px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer font-medium">Espaço Sombrio</button>
+                  <button data-start="#120215" data-end="#04051a" class="px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer font-medium">cyberpunk</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- MOLDURA DE NAVEGADOR (CHASSI) -->
+            <div class="space-y-2 pt-4 border-t border-white/5" id="browser-chassis-picker">
+              <label class="text-[10px] font-mono tracking-widest text-slate-500 block uppercase">
+                Moldura do Navegador Mockup
+              </label>
+              <div class="grid grid-cols-3 gap-2">
+                <button data-theme="dark" class="theme-btn py-2 text-xs font-semibold rounded-lg border text-center transition cursor-pointer bg-indigo-500/10 border-indigo-500/40 text-rose-50 font-bold">Mac Dark</button>
+                <button data-theme="light" class="theme-btn py-2 text-xs font-semibold rounded-lg border text-center transition cursor-pointer bg-white/[0.01] hover:bg-white/[0.03] border-white/5 text-slate-400">Mac Light</button>
+                <button data-theme="none" class="theme-btn py-2 text-xs font-semibold rounded-lg border text-center transition cursor-pointer bg-white/[0.01] hover:bg-white/[0.03] border-white/5 text-slate-400">Sem Moldura</button>
+              </div>
+              <p class="text-[10px] text-slate-500 font-sans leading-relaxed">
+                Renderiza um topo simulando a interface do Safari com botões e URL ficcionais.
+              </p>
+            </div>
+
+            <!-- BACKLIGHT GLOWS -->
+            <div class="space-y-3 pt-4 border-t border-white/5">
+              <label class="text-[10px] font-mono tracking-widest text-slate-500 block uppercase">
+                Luz de Brilho Traseira (Aura Glow)
+              </label>
+
+              <div class="flex items-center gap-3">
+                <input id="input-col-glow" type="color" value="#ef4444" class="w-10 h-10 rounded-full border border-white/10 cursor-pointer bg-transparent shrink-0" />
+                <div class="flex-1 space-y-1">
+                  <div class="flex justify-between text-xs">
+                    <span class="text-slate-400">Intensidade do Brilho</span>
+                    <span id="label-glow-intensity" class="font-mono text-indigo-400">1.5x</span>
+                  </div>
+                  <input id="input-glow-intensity" type="range" min="0" max="4" step="0.1" value="1.5" class="w-full h-1 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
+                </div>
+              </div>
+            </div>
+
+            <!-- ESTILO GRADE DE CHÃO -->
+            <div class="space-y-4 pt-4 border-t border-white/5">
+              <div class="flex items-center justify-between">
+                <label class="text-[10px] font-mono tracking-widest text-slate-500 uppercase">
+                  Exibir Grade Inferior (Grid 3D)
+                </label>
+                <input id="input-show-grid" type="checkbox" checked class="w-4 h-4 rounded text-indigo-600 bg-slate-900 border-white/10 accent-indigo-500 cursor-pointer" />
+              </div>
+
+              <div id="grid-color-subpanel" class="space-y-2 p-3 rounded-lg bg-white/[0.01] border border-white/5">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400">Cor das Linhas da Grade</span>
+                  <input id="input-col-grid" type="color" value="#4f46e5" class="w-6 h-6 rounded border border-white/10 cursor-pointer bg-transparent" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SEÇÃO ABA TEXTOS -->
+          <div id="section-text" class="space-y-5 hidden">
+            <label class="text-[10px] font-mono tracking-widest text-slate-500 block uppercase">
+              Texto das Legendas no Vídeo
+            </label>
+            
+            <p class="text-[10px] text-slate-500 leading-relaxed font-sans">
+              Escreva chamadas e textos adicionais para serem renderizados sobre o vídeo no player. Ideal para expor o link oficial ou ofertas!
+            </p>
+
+            <!-- Título Principal -->
+            <div class="space-y-1">
+              <span class="text-[11px] text-slate-400 font-medium">Texto Principal (Título Superior)</span>
+              <input id="input-text-title" type="text" value="🚀 LANDING PAGE LIVE!" class="w-full bg-slate-900 border border-white/10 text-xs px-3 py-2 rounded-lg text-slate-200 font-medium focus:border-indigo-500" placeholder="Ex: NOVO SITE NO AR!" />
+            </div>
+
+            <!-- Subtítulo / Legenda -->
+            <div class="space-y-1">
+              <span class="text-[11px] text-slate-400 font-medium">Texto Secundário (Rodapé / URL)</span>
+              <input id="input-text-sub" type="text" value="meusite3d.com • Toque para explorar" class="w-full bg-slate-900 border border-white/10 text-xs px-3 py-2 rounded-lg text-slate-200 font-medium focus:border-indigo-500" placeholder="Ex: deslize para cima" />
+            </div>
+
+            <!-- Cor das Letras -->
+            <div class="flex items-center justify-between pt-2">
+              <span class="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                <i data-lucide="palette" class="w-3.5 h-3.5 text-indigo-400"></i>
+                Cor do Texto
+              </span>
+              <input id="input-col-text" type="color" value="#ffffff" class="w-7 h-7 rounded border border-white/10 cursor-pointer bg-transparent" />
+            </div>
+
+            <div class="pt-4 border-t border-white/5 space-y-1.5 bg-white/[0.01] p-3 rounded-lg border border-white/5">
+              <span class="text-[10px] font-semibold text-indigo-400 flex items-center gap-1">
+                <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                Dica Profissional
+              </span>
+              <p class="text-[10px] text-slate-500 leading-normal">
+                Você pode deixar estes campos vazios caso deseje focar puramente no design 3D livre do mockup do seu site!
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- LOWER RECORD RENDER BUTTON -->
+        <div class="p-4 border-t border-white/5 bg-slate-950/80 backdrop-blur" id="recording-action-wrapper">
+          <div id="rec-progress-panel" class="hidden space-y-2 mb-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-rose-400 font-bold flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                GRAVANDO QUADROS DE VÍDEO...
+              </span>
+              <span id="rec-percent-text" class="font-mono text-xs">0%</span>
+            </div>
+            
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="rec-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <p id="rec-frames-text" class="text-[9px] text-slate-400 text-center uppercase font-mono tracking-wider">
+              Renderizando frames WebGL a 30fps
+            </p>
+          </div>
+
+          <button
+            id="btn-render-video"
+            class="w-full py-4 text-sm font-extrabold tracking-wider leading-none text-white bg-gradient-to-r from-rose-500 via-pink-600 to-rose-600 hover:from-rose-400 hover:to-pink-500 active:scale-[0.99] rounded-xl shadow-xl shadow-rose-900/10 cursor-pointer text-center uppercase flex items-center justify-center gap-2 border border-rose-400/20"
+          >
+            <div class="w-3 h-3 rounded-full bg-white animate-pulse shrink-0"></div>
+            <span>Renderizar e Gravar Vídeo 3D</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- DIREITA: VIEWPORT CANVAS RENDERER (lg:col-span-8) -->
+      <section class="lg:col-span-8 flex flex-col h-[calc(100vh-73px)] relative overflow-hidden bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black" id="canvas-workspace">
+        
+        <!-- Top Bar da Viewport: Ajuste de Aspectos Sociais -->
+        <div class="p-4 border-b border-white/5 flex items-center justify-between bg-slate-950/40 relative z-10 shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-mono tracking-widest text-indigo-400 uppercase font-bold">
+              PROMO VIEWPORT PREVIEW
+            </span>
+            <span class="h-3 w-px bg-white/10"></span>
+            <p class="text-xs text-slate-400 leading-normal hidden sm:inline">
+              Defina a dimensão adequada ao Reels, Shorts ou Feed
+            </p>
+          </div>
+
+          <!-- Seleção de Aspect Ratio -->
+          <div class="flex items-center gap-1.5 bg-slate-900 p-1 rounded-lg border border-white/5" id="social-aspect-picker">
+            <button data-ratio="16:9" class="aspect-btn px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer text-slate-400 hover:text-slate-200" title="16:9 YouTube / Desktops">
+              <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+              <span class="hidden md:inline">Widescreen</span>
+            </button>
+            <button data-ratio="9:16" class="aspect-btn px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer bg-indigo-500 text-white shadow-md" title="9:16 Instagram Reels / TikTok">
+              <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+              <span class="hidden md:inline">Vertical Reels</span>
+            </button>
+            <button data-ratio="1:1" class="aspect-btn px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer text-slate-400 hover:text-slate-200" title="1:1 Post de Feed">
+              <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+              <span class="hidden md:inline">Quadrado</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CRÍTICA DO GEMINI IA -->
+        <div id="gemini-critique-panel" class="hidden absolute top-16 inset-x-4 z-20 animate-slide-in select-none">
+          <div class="glass-panel p-4 rounded-xl border-l-4 border-purple-500 shadow-xl flex gap-3 text-xs">
+            <div class="w-8 h-8 rounded-full bg-purple-500/20 shrink-0 flex items-center justify-center font-bold text-purple-300">
+              ✦
+            </div>
+            <div class="space-y-1 text-slate-300">
+              <div class="font-bold text-slate-100 flex items-center gap-2">
+                Feedback Criativo do Gemini IA
+                <span class="bg-purple-900/40 border border-purple-400/20 text-[9px] text-purple-300 font-mono px-1.5 py-0.2 rounded uppercase">
+                  Análise de Design
+                </span>
+              </div>
+              <p id="gemini-critique-text" class="leading-relaxed font-sans italic">
+                Aguardando carregamento da opinião profissional do modelo...
+              </p>
+            </div>
+            <button 
+              id="btn-close-critique"
+              class="text-slate-500 hover:text-slate-300 ml-auto shrink-0 font-bold h-fit px-1 bg-white/5 rounded"
+              title="Fechar painel"
+            >
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- CANVAS CONTAINER E OVERLAYS -->
+        <div class="flex-1 flex items-center justify-center p-6 relative">
+          
+          <!-- Wrapper do Canvas (controlado dinamicamente para aplicar aspecto de tela) -->
+          <div 
+            id="canvas-3d-wrapper"
+            class="relative flex items-center justify-center w-full h-full p-4 overflow-hidden rounded-2xl transition-all duration-300 aspect-[9/16] max-w-sm border border-white/10 shadow-2xl"
+          >
+            <!-- Canvas do ThreeJS -->
+            <canvas id="render-canvas" class="w-full h-full block rounded-xl overflow-hidden"></canvas>
+
+            <!-- Textos Renderizados por cima (Simulado) -->
+            <div id="preview-text-overlay" class="absolute inset-x-4 bottom-6 text-center select-none pointer-events-none transition-all">
+              <div id="overlay-text-title" class="font-sans text-md font-extrabold tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] text-white">
+                🚀 LANDING PAGE LIVE!
+              </div>
+              <div id="overlay-text-sub" class="font-sans text-xs mt-1 text-slate-300 font-medium drop-shadow-[0_1.5px_4px_rgba(0,0,0,0.85)] max-w-[85%] mx-auto text-center truncate">
+                meusite3d.com • Toque para explorar
+              </div>
+            </div>
+
+            <!-- Marca d'água -->
+            <div class="absolute top-4 right-4 pointer-events-none text-[9px] font-mono tracking-widest text-white/30 truncate bg-black/40 px-2 py-0.5 rounded backdrop-blur">
+              3D ISOMETRIC VIEWPORT
+            </div>
+          </div>
+
+          <!-- Bottom Status Badge -->
+          <div class="absolute bottom-4 left-4 flex items-center gap-1.5 text-[10px] text-slate-400 pointer-events-none uppercase tracking-wider bg-black/40 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur font-mono">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 shrink-0 animate-spin text-indigo-400"></i>
+            <span id="badge-active-preset">PREVIEW 3D WOBBLE ATIVO</span>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- RENDER COMPLETE OUTPUT DOWNLOAD MODAL -->
+    <div id="output-video-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in">
+      <div class="glass-panel w-full max-w-lg p-6 rounded-2xl shadow-2xl relative border border-white/10 mx-4">
+        
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-inner">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+            </div>
+            <div>
+              <h3 class="font-display font-extrabold text-base text-slate-100">
+                Seu Vídeo 3D Está Pronto!
+              </h3>
+              <p class="text-[10px] text-slate-400">
+                Gravado em alta definição com Media WebGL Recorder
+              </p>
+            </div>
+          </div>
+
+          <button 
+            id="btn-close-modal"
+            class="text-slate-400 hover:text-white px-3 py-1 hover:bg-white/5 rounded-lg text-xs"
+          >
+            Voltar
+          </button>
+        </div>
+
+        <!-- Player de vídeo gerado -->
+        <div class="w-full bg-slate-900 rounded-xl overflow-hidden aspect-[9/16] max-h-[440px] flex items-center justify-center relative shadow-inner border border-white/10 p-1 bg-gradient-to-tr from-slate-950 via-slate-900 to-slate-950">
+          <video 
+            id="modal-recorded-video"
+            controls 
+            autoplay 
+            loop 
+            class="max-h-full rounded-lg object-contain block h-full w-full"
+          ></video>
+        </div>
+
+        <!-- Download Buttons -->
+        <div class="mt-5 space-y-3">
+          <a
+            id="btn-download-video"
+            href="#"
+            download="Aura3D_Video.webm"
+            class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] rounded-xl font-bold text-sm text-center text-white cursor-pointer shadow-lg shadow-indigo-600/20 block flex items-center justify-center gap-2"
+          >
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Baixar Vídeo Cinematográfico</span>
+          </a>
+
+          <button
+            id="btn-create-another"
+            class="w-full py-2.5 text-slate-400 hover:text-slate-200 text-xs font-semibold text-center hover:bg-white/5 rounded-xl cursor-pointer"
+          >
+            Criar Outra Animação
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CARREGA COMPONENTES CDN THREE.JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      // --- GERADOR DE IMAGEM MOCKUP PARA TEXTURA VIA CANVAS ---
+      function getPlaceholderWebsiteImage() {
+        const canvas = document.createElement('canvas');
+        const width = 1200;
+        const height = 2400;
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return '';
+
+        // Preenche fundo escuro
+        ctx.fillStyle = '#0a0b10';
+        ctx.fillRect(0, 0, width, height);
+
+        // Grade para visual SaaS
+        ctx.strokeStyle = '#161925';
+        ctx.lineWidth = 1;
+        const gridSize = 60;
+        for (let x = 0; x < width; x += gridSize) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+        }
+        for (let y = 0; y < height; y += gridSize) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+        }
+
+        // Degradês vibrantes de neon
+        const grad1 = ctx.createRadialGradient(200, 300, 50, 200, 300, 600);
+        grad1.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
+        grad1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad1; ctx.fillRect(0, 0, width, height);
+
+        const grad2 = ctx.createRadialGradient(1000, 800, 100, 1000, 800, 800);
+        grad2.addColorStop(0, 'rgba(236, 72, 153, 0.12)');
+        grad2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad2; ctx.fillRect(0, 0, width, height);
+
+        // Função de Card Glassmorphism
+        function drawGlassCard(x, y, w, h, r, bCol = 'rgba(255,255,255,0.08)', bg = 'rgba(20,22,33,0.65)') {
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(x + r, y);
+          ctx.arcTo(x + w, y, x + w, y + h, r);
+          ctx.arcTo(x + w, y + h, x, y + h, r);
+          ctx.arcTo(x, y + h, x, y, r);
+          ctx.arcTo(x, y, x + w, y, r);
+          ctx.closePath();
+          ctx.fillStyle = bg; ctx.fill();
+          ctx.strokeStyle = bCol; ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.restore();
+        }
+
+        // NAV BAR
+        drawGlassCard(40, 40, width - 80, 80, 20, 'rgba(255,255,255,0.1)', 'rgba(15,17,28,0.8)');
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 28px sans-serif'; ctx.fillText('AURA 3D', 80, 88);
+        ctx.fillStyle = '#6366f1'; ctx.beginPath(); ctx.arc(65, 78, 8, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#94a3b8'; ctx.font = '500 18px sans-serif';
+        ctx.fillText('Soluções', 230, 88); ctx.fillText('Preços', 360, 88); ctx.fillText('Recursos', 480, 88);
+
+        // CTA
+        drawGlassCard(width - 240, 55, 160, 50, 12, 'rgba(99, 102, 241, 0.4)', 'rgba(99, 102, 241, 0.2)');
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('Testar Agora', width - 160, 85); ctx.textAlign = 'left';
+
+        // HERO SECTION
+        drawGlassCard(width / 2 - 130, 240, 260, 40, 20, 'rgba(236,72,153,0.3)', 'rgba(236,72,153,0.1)');
+        ctx.fillStyle = '#ec4899'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('✦  A INTELIGÊNCIA 3D DO FUTURO  ✦', width / 2, 265);
+
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 64px sans-serif';
+        ctx.fillText('Crie vídeos de websites', width / 2, 360);
+        ctx.fillText('em perspectivas 3D', width / 2, 435);
+
+        ctx.fillStyle = '#64748b'; ctx.font = '22px sans-serif';
+        ctx.fillText('Converta screenshots simples em animações cinematográficas', width / 2, 510);
+        ctx.fillText('perfeitas para atrair atenção de leads em Reels e TikTok.', width / 2, 545);
+        ctx.textAlign = 'left';
+
+        // DASHBOARD PREVIEW MOCKUP
+        const dX = 100, dY = 640, dW = 1000, dH = 500;
+        drawGlassCard(dX, dY, dW, dH, 24, 'rgba(255,255,255,0.12)', 'rgba(15,17,30,0.95)');
+        
+        // Window Dots
+        ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(dX + 30, dY + 30, 8, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#eab308'; ctx.beginPath(); ctx.arc(dX + 55, dY + 30, 8, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.arc(dX + 80, dY + 30, 8, 0, Math.PI*2); ctx.fill();
+
+        // Cards inside Mockup
+        const cW = 230, cH = 130;
+        drawGlassCard(dX + 250, dY + 70, cW, cH, 16, 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.03)');
+        ctx.fillStyle = '#94a3b8'; ctx.font = '13px sans-serif'; ctx.fillText('Visualizações Ativas', dX + 270, dY + 105);
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 32px sans-serif'; ctx.fillText('142.8K', dX + 270, dY + 155);
+
+        // Bento card on bottom
+        drawGlassCard(dX + 250, dY + 220, 700, 240, 16, 'rgba(99,102,241,0.2)', 'rgba(255,255,255,0.01)');
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.fillText('Taxa de Engajamento Diário', dX + 280, dY + 265);
+        
+        ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 4; ctx.beginPath();
+        ctx.moveTo(dX + 280, dY + 380); ctx.bezierCurveTo(dX + 400, dY + 310, dX + 500, dY + 410, dX + 650, dY + 290);
+        ctx.bezierCurveTo(dX + 750, dY + 250, dX + 850, dY + 360, dX + 920, dY + 280); ctx.stroke();
+
+        // Footer lower CTA
+        drawGlassCard(100, 1220, 1000, 220, 24, 'rgba(236,72,153,0.2)', 'linear-gradient(135deg, rgba(15,17,28,0.9) 0%, rgba(236,72,153,0.05) 100%)');
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 36px sans-serif'; ctx.fillText('Pronto para animar suas próprias criações?', 140, 1310);
+        ctx.fillStyle = '#94a3b8'; ctx.font = '18px sans-serif'; ctx.fillText('Suba sua foto na barra esquerda agora mesmo e mude os presets.', 140, 1355);
+
+        return canvas.toDataURL('image/png');
+      }
+    </script>
+
+    <!-- MOTOR CORE DA APLICAÇÃO (VANILLA JAVASCRIPT & THREE.JS ESTÁTICO) -->
+    <script>
+      // 1. ESTADO GLOBAL DEFAULT
+      const state = {
+        imageSrc: getPlaceholderWebsiteImage(),
+        preset: 'wobble',
+        duration: 12,
+        ratio: '9:16',
+        browserTheme: 'dark',
+        bgGradientStart: '#0d0d15',
+        bgGradientEnd: '#1e1039',
+        showGrid: true,
+        gridColor: '#4f46e5',
+        glowColor: '#ef4444',
+        glowIntensity: 1.5,
+        cameraDistance: 11,
+        cameraPitch: 45,
+        cameraRoll: 15,
+        animationSpeed: 1.0,
+        textOverlay: '🚀 LANDING PAGE LIVE!',
+        textSubtitle: 'meusite3d.com • Toque para explorar',
+        textColor: '#ffffff',
+        deviceScale: 1.15,
+        curveAmount: 0.8,
+        activeTab: 'move'
+      };
+
+      // 2. ELEMENTOS DO DOM
+      const dom = {
+        btnReset: document.getElementById('btn-reset'),
+        btnGemini: document.getElementById('btn-gemini'),
+        geminiBtnText: document.getElementById('gemini-btn-text'),
+        notificationBanner: document.getElementById('notification-banner'),
+        notificationText: document.getElementById('notification-text'),
+        notificationClose: document.getElementById('notification-close'),
+        
+        fileInput: document.getElementById('file-input'),
+        dropArea: document.getElementById('drop-area'),
+        activeFilename: document.getElementById('active-filename'),
+        btnRestoreMockup: document.getElementById('btn-restore-mockup'),
+        
+        tabMove: document.getElementById('tab-btn-move'),
+        tabDesign: document.getElementById('tab-btn-design'),
+        tabText: document.getElementById('tab-btn-text'),
+        
+        secMove: document.getElementById('section-move'),
+        secDesign: document.getElementById('section-design'),
+        secText: document.getElementById('section-text'),
+        
+        inputDuration: document.getElementById('input-duration'),
+        labelDuration: document.getElementById('label-duration'),
+        inputSpeed: document.getElementById('input-speed'),
+        labelSpeed: document.getElementById('label-speed'),
+        inputScale: document.getElementById('input-scale'),
+        labelScale: document.getElementById('label-scale'),
+        inputCurve: document.getElementById('input-curve'),
+        labelCurve: document.getElementById('label-curve'),
+        
+        panelManual: document.getElementById('manual-controls-panel'),
+        inputPitch: document.getElementById('input-pitch'),
+        labelPitch: document.getElementById('label-pitch'),
+        inputRoll: document.getElementById('input-roll'),
+        labelRoll: document.getElementById('label-roll'),
+        
+        inputColStart: document.getElementById('input-col-start'),
+        inputColStartText: document.getElementById('input-col-start-text'),
+        inputColEnd: document.getElementById('input-col-end'),
+        inputColEndText: document.getElementById('input-col-end-text'),
+        quickGradients: document.getElementById('quick-gradient-swatches'),
+        
+        inputColGlow: document.getElementById('input-col-glow'),
+        inputGlowIntensity: document.getElementById('input-glow-intensity'),
+        labelGlowIntensity: document.getElementById('label-glow-intensity'),
+        
+        inputShowGrid: document.getElementById('input-show-grid'),
+        gridColorSubpanel: document.getElementById('grid-color-subpanel'),
+        inputColGrid: document.getElementById('input-col-grid'),
+        
+        inputTextTitle: document.getElementById('input-text-title'),
+        inputTextSub: document.getElementById('input-text-sub'),
+        inputColText: document.getElementById('input-col-text'),
+        
+        btnRenderVideo: document.getElementById('btn-render-video'),
+        recProgressPanel: document.getElementById('rec-progress-panel'),
+        recPercentText: document.getElementById('rec-percent-text'),
+        recProgressBar: document.getElementById('rec-progress-bar'),
+        recFramesText: document.getElementById('rec-frames-text'),
+        
+        canvasWrapper: document.getElementById('canvas-3d-wrapper'),
+        renderCanvas: document.getElementById('render-canvas'),
+        previewTitle: document.getElementById('overlay-text-title'),
+        previewSub: document.getElementById('overlay-text-sub'),
+        badgeActivePreset: document.getElementById('badge-active-preset'),
+        
+        geminiCritiquePanel: document.getElementById('gemini-critique-panel'),
+        geminiCritiqueText: document.getElementById('gemini-critique-text'),
+        btnCloseCritique: document.getElementById('btn-close-critique'),
+        
+        outputVideoModal: document.getElementById('output-video-modal'),
+        btnCloseModal: document.getElementById('btn-close-modal'),
+        modalRecordedVideo: document.getElementById('modal-recorded-video'),
+        btnDownloadVideo: document.getElementById('btn-download-video'),
+        btnCreateAnother: document.getElementById('btn-create-another')
+      };
+
+      // 3. EVENTO DE NOTIFICAÇÃO HUD
+      function showNotification(text, type = 'success') {
+        dom.notificationText.innerText = text;
+        dom.notificationBanner.classList.remove('hidden');
+        
+        // Estilo temporário baseado no tipo
+        if (type === 'error') {
+          dom.notificationBanner.className = "bg-rose-950/90 border-b border-rose-500/20 px-6 py-2.5 flex items-center justify-between text-xs font-medium text-rose-200 z-30 relative";
+        } else if (type === 'info') {
+          dom.notificationBanner.className = "bg-sky-950/90 border-b border-sky-500/20 px-6 py-2.5 flex items-center justify-between text-xs font-medium text-sky-200 z-30 relative";
+        } else {
+          dom.notificationBanner.className = "bg-indigo-950/90 border-b border-indigo-500/20 px-6 py-2.5 flex items-center justify-between text-xs font-medium text-indigo-400 z-30 relative";
+        }
+      }
+
+      dom.notificationClose.addEventListener('click', () => {
+        dom.notificationBanner.classList.add('hidden');
+      });
+
+      // 4. SISTEMA DE COMPONENTES DE TABULAÇÃO (TABS)
+      function switchTab(target) {
+        state.activeTab = target;
+        [dom.tabMove, dom.tabDesign, dom.tabText].forEach(btn => {
+          btn.className = "flex-1 py-3 text-center transition flex justify-center items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-white/[0.01]";
+        });
+        [dom.secMove, dom.secDesign, dom.secText].forEach(sec => sec.classList.add('hidden'));
+
+        if (target === 'move') {
+          dom.tabMove.className = "flex-1 py-3 text-center transition flex justify-center items-center gap-2 text-indigo-400 border-b-2 border-indigo-500 bg-indigo-500/[0.02]";
+          dom.secMove.classList.remove('hidden');
+        } else if (target === 'design') {
+          dom.tabDesign.className = "flex-1 py-3 text-center transition flex justify-center items-center gap-2 text-indigo-400 border-b-2 border-indigo-500 bg-indigo-500/[0.02]";
+          dom.secDesign.classList.remove('hidden');
+        } else if (target === 'text') {
+          dom.tabText.className = "flex-1 py-3 text-center transition flex justify-center items-center gap-2 text-indigo-400 border-b-2 border-indigo-500 bg-indigo-500/[0.02]";
+          dom.secText.classList.remove('hidden');
+        }
+      }
+
+      dom.tabMove.addEventListener('click', () => switchTab('move'));
+      dom.tabDesign.addEventListener('click', () => switchTab('design'));
+      dom.tabText.addEventListener('click', () => switchTab('text'));
+
+      // 5. INICIALIZAÇÃO DO THREE.JS WEBGL ENGINE
+      let scene, camera, renderer, mainGroup;
+      let gridHelper, glowLight, ambientLight, dirLight, shadowPlane;
+      let planeMesh = null;
+      let isRecording = false;
+      let recordingFrame = 0;
+      let recordingTotal = 0;
+      let recordedChunks = [];
+      let mediaRecorder = null;
+      let playAnimFrameId = null;
+
+      function initThreeEngine() {
+        const width = dom.canvasWrapper.clientWidth || 350;
+        const height = dom.canvasWrapper.clientHeight || 550;
+
+        // Cena
+        scene = new THREE.Scene();
+
+        // Câmera
+        camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+        camera.position.set(0, 5, 12);
+
+        // Renderizador WebGL
+        renderer = new THREE.WebGLRenderer({
+          canvas: dom.renderCanvas,
+          antialias: true,
+          alpha: true,
+          preserveDrawingBuffer: true // Necessário para gravação
+        });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        // Grupo Principal (Contém o Site)
+        mainGroup = new THREE.Group();
+        scene.add(mainGroup);
+
+        // Luzes
+        ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        dirLight = new THREE.DirectionalLight(0xffffff, 1.25);
+        dirLight.position.set(5, 12, 8);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        // Glow Traseiro (PointLight)
+        glowLight = new THREE.PointLight(0xffffff, 3, 15);
+        glowLight.position.set(0, 0, -1.5);
+        scene.add(glowLight);
+
+        // Grade Terrestre (Floor Grid)
+        gridHelper = new THREE.GridHelper(40, 40, 0x6366f1, 0x1e1b4b);
+        gridHelper.position.y = -4.5;
+        scene.add(gridHelper);
+
+        // Sombra Projetada
+        const shadowGeo = new THREE.PlaneGeometry(100, 100);
+        const shadowMat = new THREE.ShadowMaterial({ opacity: 0.4 });
+        shadowPlane = new THREE.Mesh(shadowGeo, shadowMat);
+        shadowPlane.rotation.x = -Math.PI / 2;
+        shadowPlane.position.y = -4.49;
+        shadowPlane.receiveShadow = true;
+        scene.add(shadowPlane);
+
+        // Event Listeners de resize
+        window.addEventListener('resize', onWindowResize);
+      }
+
+      function onWindowResize() {
+        if (!renderer || !camera) return;
+        const width = dom.canvasWrapper.clientWidth;
+        const height = dom.canvasWrapper.clientHeight;
+        renderer.setSize(width, height);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+      }
+
+      // 6. ADICIONA MOLDURA DO SAFARI/MAC AO SCREENSHOT VIA CANVAS 2D DINÂMICO
+      function createFramedTexture(imgSource, theme) {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            const tempCanvas = document.createElement('canvas');
+            const hasFrame = theme !== 'none';
+            const frameH = hasFrame ? 50 : 0;
+            
+            // Proporção de tamanho para alta qualidade
+            tempCanvas.width = img.width;
+            const factor = img.width / 1200;
+            const scaledFrameH = Math.round(frameH * factor);
+            tempCanvas.height = img.height + scaledFrameH;
+            
+            const g = tempCanvas.getContext('2d');
+            if (g) {
+              // Fundo
+              g.fillStyle = theme === 'dark' ? '#18181b' : '#f4f4f5';
+              g.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+              
+              if (hasFrame) {
+                // Botões clássicos mac
+                const r = 6 * factor;
+                const y = scaledFrameH / 2;
+                
+                g.fillStyle = '#ef4444'; g.beginPath(); g.arc(20 * factor, y, r, 0, Math.PI * 2); g.fill();
+                g.fillStyle = '#eab308'; g.beginPath(); g.arc(40 * factor, y, r, 0, Math.PI * 2); g.fill();
+                g.fillStyle = '#22c55e'; g.beginPath(); g.arc(60 * factor, y, r, 0, Math.PI * 2); g.fill();
+
+                // Barra de endereço mockup
+                g.fillStyle = theme === 'dark' ? '#27272a' : '#e4e4e7';
+                const bW = 500 * factor, bH = 26 * factor;
+                const bX = (tempCanvas.width - bW) / 2, bY = (scaledFrameH - bH) / 2;
+                g.beginPath(); g.roundRect(bX, bY, bW, bH, 6 * factor); g.fill();
+                
+                g.fillStyle = theme === 'dark' ? '#71717a' : '#a1a1aa';
+                g.font = `${Math.round(11 * factor)}px sans-serif`; g.textAlign = 'center';
+                g.fillText('meusite3d.com', tempCanvas.width / 2, bY + bH / 2 + 4 * factor);
+                g.textAlign = 'left';
+              }
+              // Desenha o screenshot abaixo da barra
+              g.drawImage(img, 0, scaledFrameH);
+            }
+
+            const texture = new THREE.CanvasTexture(tempCanvas);
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            
+            resolve({
+              texture,
+              ratio: tempCanvas.width / tempCanvas.height
+            });
+          };
+
+          img.onerror = () => {
+            // Textura coringa vermelha se falhar
+            const fallbackC = document.createElement('canvas');
+            fallbackC.width = 512; fallbackC.height = 1024;
+            const g = fallbackC.getContext('2d');
+            g.fillStyle = '#991b1b'; g.fillRect(0,0,512,1024);
+            resolve({
+              texture: new THREE.CanvasTexture(fallbackC),
+              ratio: 0.5
+            });
+          };
+
+          img.src = imgSource;
+        });
+      }
+
+      // 7. COMPILAÇÃO E CRIAÇÃO DO PLANO MESH 3D (BENDO CURVE)
+      function rebuild3DPlaneMesh() {
+        if (!scene || !mainGroup) return;
+
+        // Limpa filhos anteriores do grupo
+        while(mainGroup.children.length > 0) {
+          mainGroup.remove(mainGroup.children[0]);
+        }
+
+        createFramedTexture(state.imageSrc, state.browserTheme).then(({ texture, ratio }) => {
+          const targetW = 5 * state.deviceScale;
+          const targetH = targetW / ratio;
+
+          // Cria plano subdividido para podermos curvar
+          const segmentsX = 1;
+          const segmentsY = 64;
+          const geometry = new THREE.PlaneGeometry(targetW, targetH, segmentsX, segmentsY);
+
+          // Função de distorção de matriz matemática para o visual isométrico display curvo
+          const pos = geometry.attributes.position;
+          const bend = state.curveAmount * 0.4;
+          if (bend !== 0) {
+            for (let i = 0; i < pos.count; i++) {
+              const y = pos.getY(i);
+              const relY = y / (targetH / 2); // -1.0 a +1.0
+              // Curva suave em forma de displays cilindricos
+              const zVal = Math.cos(relY * Math.PI / 2) * bend - bend;
+              pos.setZ(i, zVal);
+            }
+            geometry.computeVertexNormals();
+          }
+
+          // Material padrão premium
+          const material = new THREE.MeshStandardMaterial({
+            map: texture,
+            side: THREE.DoubleSide,
+            roughness: 0.18,
+            metalness: 0.1
+          });
+
+          planeMesh = new THREE.Mesh(geometry, material);
+          planeMesh.castShadow = true;
+          planeMesh.receiveShadow = true;
+          mainGroup.add(planeMesh);
+
+          // Centraliza a altura da câmera
+          const dist = Math.max(targetH * 0.9, 8.5);
+          state.cameraDistance = dist;
+        });
+      }
+
+      // 8. ANIMANDO A SCENE - LAÇO DE RENDERIZAÇÃO
+      const startTime = Date.now();
+
+      function animate() {
+        playAnimFrameId = requestAnimationFrame(animate);
+        if (!scene || !camera || !renderer || !planeMesh) return;
+
+        // Controla o tempo dependendo se estamos gravando vídeo em background ou simulando ao vivo
+        let t = 0;
+        if (isRecording) {
+          const currentFrame = recordingFrame;
+          const total = recordingTotal;
+          const simulatedSecs = (currentFrame / total) * state.duration;
+          t = simulatedSecs;
+          
+          // Progresso
+          const pct = Math.round((currentFrame / total) * 100);
+          dom.recPercentText.innerText = `${pct}%`;
+          dom.recProgressBar.style.width = `${pct}%`;
+          dom.recFramesText.innerText = `Renderizando quadro ${currentFrame} de ${total}`;
+
+          recordingFrame++;
+
+          if (currentFrame >= total) {
+            isRecording = false;
+            stopRecordingMedia();
+          }
+        } else {
+          t = (Date.now() - startTime) / 1000;
+        }
+
+        // Variáveis físicas calculadas
+        const speedMult = state.animationSpeed;
+        const speedTime = t * speedMult;
+        const targetHeight = planeMesh.geometry.parameters.height || 10;
+        const baseDistance = state.cameraDistance;
+
+        // Limpar posições
+        mainGroup.rotation.set(0, 0, 0);
+        mainGroup.position.set(0, 0, 0);
+        camera.position.set(0, 0, baseDistance);
+        camera.lookAt(0, 0, 0);
+
+        const computedPitch = state.cameraPitch * Math.PI / 180;
+        const computedRoll = state.cameraRoll * Math.PI / 180;
+
+        // APLICAÇÃO DOS FAMOSOS PRESETS CINEMATOGRÁFICOS DE CÂMERA
+        switch (state.preset) {
+          case 'scroll': {
+            // Rolagem infinita do topo para a base
+            const progress = speedTime % state.duration;
+            const pct = Math.min(progress / state.duration, 1.0);
+            
+            const startY = targetHeight / 2 - 2;
+            const endY = -targetHeight / 2 + 2;
+            const currentY = startY + (endY - startY) * pct;
+
+            const lookAtTarget = new THREE.Vector3(0, currentY, 0);
+            const cameraAngle = -35 * Math.PI / 180;
+            camera.position.set(2, currentY + baseDistance * Math.sin(-cameraAngle), baseDistance * Math.cos(-cameraAngle));
+            camera.lookAt(lookAtTarget);
+
+            mainGroup.rotation.y = 0.22 + (Math.sin(t * 0.4) * 0.04);
+            break;
+          }
+
+          case 'orbit': {
+            // Rotação orbital constante
+            const angle = speedTime * 0.3;
+            camera.position.set(
+              Math.sin(angle) * baseDistance,
+              Math.sin(t * 0.5) * (baseDistance * 0.15) + 1,
+              Math.cos(angle) * baseDistance
+            );
+            camera.lookAt(0, 0, 0);
+            break;
+          }
+
+          case 'zoom': {
+            // Zoom in progressivo
+            const progress = speedTime % state.duration;
+            const easing = Math.sin((progress / state.duration) * Math.PI / 2);
+            const zoomAmount = baseDistance - (baseDistance * 0.45 * easing);
+
+            camera.position.set(1.5, 1, zoomAmount);
+            camera.lookAt(0, -targetHeight * 0.12 * easing, 0);
+
+            mainGroup.rotation.y = computedPitch + 0.1;
+            break;
+          }
+
+          case 'wobble': {
+            // Flutuação diagonal isométrica sutil
+            const bounce = Math.sin(t * 1.5) * 0.22;
+            mainGroup.position.y = bounce;
+
+            mainGroup.rotation.y = computedPitch + Math.sin(speedTime * 0.7) * 0.12;
+            mainGroup.rotation.x = Math.cos(speedTime * 0.5) * 0.05;
+            mainGroup.rotation.z = Math.sin(speedTime * 0.4) * 0.03;
+
+            camera.position.set(0, 0.4, baseDistance);
+            camera.lookAt(0, 0, 0);
+            break;
+          }
+
+          case 'reveal': {
+            // Revelação da câmera fechada para aberta
+            const progress = speedTime % state.duration;
+            const ease = 1.0 - Math.pow(1.0 - (progress / state.duration), 3); // cubic ease out
+            
+            const startD = baseDistance * 0.35;
+            const curD = startD + (baseDistance - startD) * ease;
+
+            const startLook = new THREE.Vector3(-1.5, targetHeight * 0.3, 0);
+            const endLook = new THREE.Vector3(0, 0, 0);
+            const curLook = startLook.clone().lerp(endLook, ease);
+
+            camera.position.set(0, 0.4, curD);
+            camera.lookAt(curLook);
+
+            mainGroup.rotation.y = 0.52 * ease;
+            mainGroup.rotation.x = 0.2 * ease;
+            break;
+          }
+
+          case 'manual': {
+            // Controle livre
+            camera.position.set(0, 0, baseDistance);
+            camera.lookAt(0, 0, 0);
+
+            mainGroup.rotation.y = computedPitch;
+            mainGroup.rotation.z = computedRoll;
+            mainGroup.rotation.x = 0.12;
+            break;
+          }
+        }
+
+        // Renderiza
+        renderer.render(scene, camera);
+      }
+
+      // Atualiza valores nas tags dinamicamente
+      function syncSettingsVisuals() {
+        // Cores de fundo
+        dom.canvasWrapper.style.background = `linear-gradient(135deg, ${state.bgGradientStart} 0%, ${state.bgGradientEnd} 100%)`;
+        
+        // Brilho traseiro do mockup
+        if (glowLight) {
+          glowLight.color.set(state.glowColor);
+          glowLight.intensity = state.glowIntensity * 5;
+        }
+
+        // Grade de chão
+        if (gridHelper) {
+          gridHelper.visible = state.showGrid;
+          gridHelper.material.color.set(state.gridColor);
+        }
+
+        // Títulos de preview
+        dom.previewTitle.innerText = state.textOverlay;
+        dom.previewTitle.style.color = state.textColor;
+        dom.previewSub.innerText = state.textSubtitle;
+
+        // Mudança de Aspecto de Visualização (16:9, 9:16, 1:1)
+        dom.canvasWrapper.className = "relative flex items-center justify-center w-full h-full p-4 overflow-hidden rounded-2xl transition-all duration-300 border border-white/10 shadow-2xl";
+        if (state.ratio === '9:16') {
+          dom.canvasWrapper.classList.add('aspect-[9/16]', 'max-w-sm');
+        } else if (state.ratio === '16:9') {
+          dom.canvasWrapper.classList.add('aspect-[16/9]', 'max-w-2xl');
+        } else if (state.ratio === '1:1') {
+          dom.canvasWrapper.classList.add('aspect-[1/1]', 'max-w-md');
+        }
+
+        // Badge inferior de feedback
+        dom.badgeActivePreset.innerText = `PREVIEW 3D ${state.preset.toUpperCase()} ATIVO`;
+        
+        setTimeout(onWindowResize, 60);
+      }
+
+      // 9. EVENT LISTENERS DE CONFIGURAÇÕES DE DURAÇÃO/MÉTRICAS
+      dom.inputDuration.addEventListener('input', (e) => {
+        state.duration = parseInt(e.target.value);
+        dom.labelDuration.innerText = `${state.duration} segundos`;
+      });
+      dom.inputSpeed.addEventListener('input', (e) => {
+        state.animationSpeed = parseFloat(e.target.value);
+        dom.labelSpeed.innerText = `${state.animationSpeed.toFixed(1)}x`;
+      });
+      dom.inputScale.addEventListener('input', (e) => {
+        state.deviceScale = parseFloat(e.target.value);
+        dom.labelScale.innerText = `${state.deviceScale.toFixed(2)}x`;
+        rebuild3DPlaneMesh();
+      });
+      dom.inputCurve.addEventListener('input', (e) => {
+        state.curveAmount = parseFloat(e.target.value);
+        dom.labelCurve.innerText = `${(state.curveAmount * 100).toFixed(0)}%`;
+        rebuild3DPlaneMesh();
+      });
+
+      // Rotação Manual
+      dom.inputPitch.addEventListener('input', (e) => {
+        state.cameraPitch = parseInt(e.target.value);
+        dom.labelPitch.innerText = `${state.cameraPitch}°`;
+      });
+      dom.inputRoll.addEventListener('input', (e) => {
+        state.cameraRoll = parseInt(e.target.value);
+        dom.labelRoll.innerText = `${state.cameraRoll}°`;
+      });
+
+      // Cores do Fundo
+      dom.inputColStart.addEventListener('input', (e) => {
+        state.bgGradientStart = e.target.value;
+        dom.inputColStartText.value = e.target.value.toUpperCase();
+        syncSettingsVisuals();
+      });
+      dom.inputColStartText.addEventListener('change', (e) => {
+        state.bgGradientStart = e.target.value;
+        dom.inputColStart.value = e.target.value;
+        syncSettingsVisuals();
+      });
+
+      dom.inputColEnd.addEventListener('input', (e) => {
+        state.bgGradientEnd = e.target.value;
+        dom.inputColEndText.value = e.target.value.toUpperCase();
+        syncSettingsVisuals();
+      });
+      dom.inputColEndText.addEventListener('change', (e) => {
+        state.bgGradientEnd = e.target.value;
+        dom.inputColEnd.value = e.target.value;
+        syncSettingsVisuals();
+      });
+
+      // Glow traseiro
+      dom.inputColGlow.addEventListener('input', (e) => {
+        state.glowColor = e.target.value;
+        syncSettingsVisuals();
+      });
+      dom.inputGlowIntensity.addEventListener('input', (e) => {
+        state.glowIntensity = parseFloat(e.target.value);
+        dom.labelGlowIntensity.innerText = `${state.glowIntensity.toFixed(1)}x`;
+        syncSettingsVisuals();
+      });
+
+      // Grade de chão
+      dom.inputShowGrid.addEventListener('change', (e) => {
+        state.showGrid = e.target.checked;
+        if (state.showGrid) {
+          dom.gridColorSubpanel.classList.remove('hidden');
+        } else {
+          dom.gridColorSubpanel.classList.add('hidden');
+        }
+        syncSettingsVisuals();
+      });
+      dom.inputColGrid.addEventListener('input', (e) => {
+        state.gridColor = e.target.value;
+        syncSettingsVisuals();
+      });
+
+      // Títulos
+      dom.inputTextTitle.addEventListener('input', (e) => {
+        state.textOverlay = e.target.value;
+        syncSettingsVisuals();
+      });
+      dom.inputTextSub.addEventListener('input', (e) => {
+        state.textSubtitle = e.target.value;
+        syncSettingsVisuals();
+      });
+      dom.inputColText.addEventListener('input', (e) => {
+        state.textColor = e.target.value;
+        syncSettingsVisuals();
+      });
+
+      // Cliques Gradients Swatches
+      dom.quickGradients.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        state.bgGradientStart = btn.dataset.start;
+        state.bgGradientEnd = btn.dataset.end;
+        dom.inputColStart.value = state.bgGradientStart;
+        dom.inputColStartText.value = state.bgGradientStart.toUpperCase();
+        dom.inputColEnd.value = state.bgGradientEnd;
+        dom.inputColEndText.value = state.bgGradientEnd.toUpperCase();
+        syncSettingsVisuals();
+      });
+
+      // Seletor de aspect ratio na barra de visualização
+      const zoomRatioPanel = document.getElementById('social-aspect-picker');
+      zoomRatioPanel.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+
+        state.ratio = btn.dataset.ratio;
+        document.querySelectorAll('.aspect-btn').forEach(b => {
+          b.className = "aspect-btn px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer text-slate-400 hover:text-slate-200";
+        });
+        btn.className = "aspect-btn px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer bg-indigo-500 text-white shadow-md";
+        
+        syncSettingsVisuals();
+      });
+
+      // Seletor de presets cinematográficos
+      const presetGrid = document.getElementById('cinematic-preset-grid');
+      presetGrid.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+
+        state.preset = btn.dataset.preset;
+        document.querySelectorAll('[data-preset]').forEach(b => {
+          b.className = "p-3 rounded-xl text-left transition select-none flex flex-col gap-0.5 group border bg-white/[0.01] hover:bg-white/[0.04] border-white/5 text-slate-400";
+          const sub = b.querySelector('span:first-child');
+          if (sub) sub.className = "text-[11px] font-mono tracking-wider text-slate-500";
+        });
+
+        // Estilo do botão selecionado
+        btn.className = "p-3 rounded-xl text-left transition select-none flex flex-col gap-0.5 group border bg-indigo-500/10 border-indigo-500/40 text-rose-50 font-bold";
+        const selectedSub = btn.querySelector('span:first-child');
+        if (selectedSub) selectedSub.className = "text-[11px] font-mono tracking-wider text-indigo-400 font-bold";
+
+        // Toggles da visibilidade para controles adicionais se for manual
+        if (state.preset === 'manual') {
+          dom.panelManual.classList.remove('opacity-65');
+          dom.panelManual.classList.add('opacity-100');
+        } else {
+          dom.panelManual.classList.remove('opacity-100');
+          dom.panelManual.classList.add('opacity-65');
+        }
+
+        syncSettingsVisuals();
+      });
+
+      // Seletor de tema do mockup de browser
+      const themePicker = document.getElementById('browser-chassis-picker');
+      themePicker.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+
+        state.browserTheme = btn.dataset.theme;
+        document.querySelectorAll('.theme-btn').forEach(b => {
+          b.className = "theme-btn py-2 text-xs font-semibold rounded-lg border text-center transition cursor-pointer bg-white/[0.01] hover:bg-white/[0.03] border-white/5 text-slate-400";
+        });
+        btn.className = "theme-btn py-2 text-xs font-semibold rounded-lg border text-center transition cursor-pointer bg-indigo-500/10 border-indigo-500/40 text-rose-50 font-bold";
+
+        rebuild3DPlaneMesh();
+      });
+
+      // Resetar aos padrões iniciais
+      dom.btnReset.addEventListener('click', () => {
+        state.preset = 'wobble';
+        state.duration = 12;
+        state.bgGradientStart = '#0d0d15';
+        state.bgGradientEnd = '#1e1039';
+        state.showGrid = true;
+        state.gridColor = '#4f46e5';
+        state.glowColor = '#ef4444';
+        state.glowIntensity = 1.5;
+        state.cameraPitch = 45;
+        state.cameraRoll = 15;
+        state.animationSpeed = 1.0;
+        state.textOverlay = '🚀 LANDING PAGE LIVE!';
+        state.textSubtitle = 'meusite3d.com • Toque para explorar';
+        state.textColor = '#ffffff';
+        state.deviceScale = 1.15;
+        state.curveAmount = 0.8;
+
+        // Reset inputs
+        dom.inputDuration.value = 12;
+        dom.labelDuration.innerText = '12 segundos';
+        dom.inputSpeed.value = 1.0;
+        dom.labelSpeed.innerText = '1.0x';
+        dom.inputScale.value = 1.15;
+        dom.labelScale.innerText = '1.15x';
+        dom.inputCurve.value = 0.8;
+        dom.labelCurve.innerText = '80%';
+        dom.inputPitch.value = 45;
+        dom.labelPitch.innerText = '45°';
+        dom.inputRoll.value = 15;
+        dom.labelRoll.innerText = '15°';
+        
+        dom.inputColStart.value = '#0d0d15';
+        dom.inputColStartText.value = '#0D0D15';
+        dom.inputColEnd.value = '#1e1039';
+        dom.inputColEndText.value = '#1E1039';
+        dom.inputColGlow.value = '#ef4444';
+        dom.inputGlowIntensity.value = 1.5;
+        dom.labelGlowIntensity.innerText = '1.5x';
+        dom.inputShowGrid.checked = true;
+        dom.gridColorSubpanel.classList.remove('hidden');
+        dom.inputColGrid.value = '#4f46e5';
+        
+        dom.inputTextTitle.value = '🚀 LANDING PAGE LIVE!';
+        dom.inputTextSub.value = 'meusite3d.com • Toque para explorar';
+        dom.inputColText.value = '#ffffff';
+
+        rebuild3DPlaneMesh();
+        syncSettingsVisuals();
+        showNotification('Configurações do cenário redefinidas ao padrão do sistema.', 'info');
+      });
+
+      // 10. GESTÃO DE ARQUIVO E DRAG AND DROP DETECT
+      dom.dropArea.addEventListener('click', () => dom.fileInput.click());
+      dom.fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) handleFile(file);
+      });
+
+      dom.dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dom.dropArea.classList.add('border-indigo-500', 'bg-indigo-500/[0.02]');
+      });
+      dom.dropArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dom.dropArea.classList.remove('border-indigo-500', 'bg-indigo-500/[0.02]');
+      });
+      dom.dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dom.dropArea.classList.remove('border-indigo-500', 'bg-indigo-500/[0.02]');
+        const file = e.dataTransfer.files[0];
+        if (file) handleFile(file);
+      });
+
+      function handleFile(file) {
+        if (!file.type.match('image.*')) {
+          showNotification('Formato inválido! Envie uma captura PNG ou JPG.', 'error');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          state.imageSrc = event.target.result;
+          dom.activeFilename.innerText = file.name;
+          rebuild3DPlaneMesh();
+          showNotification('Sua imagem foi aplicada com sucesso à malha geométrica!', 'success');
+        };
+        reader.readAsDataURL(file);
+      }
+
+      dom.btnRestoreMockup.addEventListener('click', () => {
+        state.imageSrc = getPlaceholderWebsiteImage();
+        dom.activeFilename.innerText = 'Mockup Aura SaaS';
+        rebuild3DPlaneMesh();
+        showNotification('Modelo default de website recarregado.', 'info');
+      });
+
+      // 11. OTIMIZAÇÃO CRIATIVA VIA GEMINI IA (CHAMA O BACKEND SERVER SE INSTALADO)
+      dom.btnGemini.addEventListener('click', async () => {
+        dom.geminiBtnText.innerText = "Analisando com Gemini...";
+        dom.btnGemini.disabled = true;
+
+        try {
+          // Faz requisição opcional para o nosso backend que contém a API do Gemini
+          const response = await fetch('/api/analyze-screenshot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image: state.imageSrc,
+              mimeType: 'image/png'
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Sem backend');
+          }
+
+          const resData = await response.json();
+          
+          // Aplica as sugestões criativas da IA
+          state.preset = resData.recommendedPreset || 'wobble';
+          state.bgGradientStart = resData.bgStart || '#0a0d14';
+          state.bgGradientEnd = resData.bgEnd || '#120f2b';
+          state.glowColor = resData.glow || '#ec4899';
+          state.textOverlay = resData.tagline ? resData.tagline.toUpperCase() : state.textOverlay;
+          state.textSubtitle = resData.subtitle || state.textSubtitle;
+          state.showGrid = true;
+          state.glowIntensity = 2.0;
+
+          // Atualiza inputs visuais para refletir o ganho de IA
+          dom.inputColStart.value = state.bgGradientStart;
+          dom.inputColStartText.value = state.bgGradientStart.toUpperCase();
+          dom.inputColEnd.value = state.bgGradientEnd;
+          dom.inputColEndText.value = state.bgGradientEnd.toUpperCase();
+          dom.inputColGlow.value = state.glowColor;
+          dom.inputTextTitle.value = state.textOverlay;
+          dom.inputTextSub.value = state.textSubtitle;
+          dom.inputGlowIntensity.value = 2.0;
+          dom.labelGlowIntensity.innerText = '2.0x';
+
+          // Exibe crítica técnica de UI do Gemini
+          dom.geminiCritiqueText.innerText = `"${resData.critique}"`;
+          dom.geminiCritiquePanel.classList.remove('hidden');
+
+          rebuild3DPlaneMesh();
+          syncSettingsVisuals();
+          showNotification('✦ Design otimizado pelo diretor criativo do Gemini IA!', 'success');
+
+        } catch (err) {
+          // Fallback gracioso offline caso esteja rodando puro no Github Pages
+          console.warn('Rodando offline. Presets artísticos locais aplicados!');
+          
+          state.preset = 'orbit';
+          state.bgGradientStart = '#02030d';
+          state.bgGradientEnd = '#12061e';
+          state.glowColor = '#a855f7';
+          state.textOverlay = "AURA 3D CINEMA";
+          state.textSubtitle = "Modo estático compatível ativo!";
+
+          dom.inputColStart.value = state.bgGradientStart;
+          dom.inputColStartText.value = '#02030D';
+          dom.inputColEnd.value = state.bgGradientEnd;
+          dom.inputColEndText.value = '#12061E';
+          dom.inputColGlow.value = state.glowColor;
+          dom.inputTextTitle.value = state.textOverlay;
+          dom.inputTextSub.value = state.textSubtitle;
+
+          rebuild3DPlaneMesh();
+          syncSettingsVisuals();
+          showNotification('Otimização offline: Ativou o preset alternativo Espaço Orquídea!', 'info');
+        } finally {
+          dom.geminiBtnText.innerText = "Otimizar com Gemini IA";
+          dom.btnGemini.disabled = false;
+        }
+      });
+
+      dom.btnCloseCritique.addEventListener('click', () => {
+        dom.geminiCritiquePanel.classList.add('hidden');
+      });
+
+      // 12. GRAVAÇÃO DETERMINÍSTICA DE VÍDEO (CANVAS MEDIA RECORDER)
+      dom.btnRenderVideo.addEventListener('click', () => {
+        if (isRecording) return;
+
+        // Limpa blob anterior
+        if (dom.modalRecordedVideo.src) {
+          URL.revokeObjectURL(dom.modalRecordedVideo.src);
+        }
+
+        recordedChunks = [];
+        isRecording = true;
+        recordingFrame = 0;
+        
+        const fps = 30;
+        recordingTotal = fps * state.duration;
+
+        dom.recProgressPanel.classList.remove('hidden');
+        dom.btnRenderVideo.classList.add('hidden');
+
+        try {
+          const stream = dom.renderCanvas.captureStream(fps);
+          let options = { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 6000000 };
+          try {
+            mediaRecorder = new MediaRecorder(stream, options);
+          } catch (e) {
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+          }
+
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+              recordedChunks.push(event.data);
+            }
+          };
+
+          mediaRecorder.onstop = () => {
+            const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+            const vidUrl = URL.createObjectURL(videoBlob);
+            
+            dom.modalRecordedVideo.src = vidUrl;
+            dom.btnDownloadVideo.href = vidUrl;
+            dom.btnDownloadVideo.download = `Aura3D_Video_${state.preset}.webm`;
+
+            dom.outputVideoModal.classList.remove('hidden');
+            showNotification('Seu vídeo promocional foi gerado com sucesso!', 'success');
+
+            // Reset UI painel
+            dom.recProgressPanel.classList.add('hidden');
+            dom.btnRenderVideo.classList.remove('hidden');
+          };
+
+          mediaRecorder.start();
+        } catch (err) {
+          console.error('Falhou ao iniciar gravação:', err);
+          isRecording = false;
+          dom.recProgressPanel.classList.add('hidden');
+          dom.btnRenderVideo.classList.remove('hidden');
+          showNotification('Erro ao iniciar gravador nativo do navegador.', 'error');
+        }
+      });
+
+      function stopRecordingMedia() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+      }
+
+      dom.btnCloseModal.addEventListener('click', () => {
+        dom.outputVideoModal.classList.add('hidden');
+      });
+      dom.btnCreateAnother.addEventListener('click', () => {
+        dom.outputVideoModal.classList.add('hidden');
+      });
+
+      // 13. BOOT DA COMPILAÇÃO
+      initThreeEngine();
+      rebuild3DPlaneMesh();
+      syncSettingsVisuals();
+      animate();
+
+      // Renderiza ícones do Lucide
+      lucide.createIcons();
+    </script>
   </body>
 </html>
-

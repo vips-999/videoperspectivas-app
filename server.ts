@@ -146,23 +146,23 @@ Retorne um JSON válido contendo tagline, subtitle, bgStart, bgEnd, glow, recomm
   }
 });
 
-// Configure Vite middleware or serve static artifacts based on running environment
+// Configure static file serving based on running environment
 async function initServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-    console.log('Vite middleware mounted in development mode');
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-    console.log('Serving production static bundle from /dist');
-  }
+  const staticPath = process.env.NODE_ENV === 'production'
+    ? path.join(process.cwd(), 'dist')
+    : process.cwd();
+
+  // Serve static files (HTML, CSS, JS, Images, canvas)
+  app.use(express.static(staticPath));
+
+  // Serve the SPA main index.html file for any route that is not API
+  app.get('*', (req, res, next) => {
+    // Avoid capturing api routes
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(staticPath, 'index.html'));
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Web site 3D Animator server running on http://localhost:${PORT}`);
