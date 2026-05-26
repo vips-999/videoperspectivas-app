@@ -128,6 +128,7 @@ const state = {
   cameraRoll: 15,
   perspectiveDirection: 'direita',
   perspectiveHorizontalOffset: 50,
+  scrollRevealEnabled: false,
   animationSpeed: 1.0,
   textOverlay: '🚀 LANDING PAGE LIVE!',
   textSubtitle: 'meusite3d.com • Toque para explorar',
@@ -151,6 +152,16 @@ const dom = {
   activeFilename: document.getElementById('active-filename'),
   btnRestoreMockup: document.getElementById('btn-restore-mockup'),
   
+  tabMove: document.getElementById('tab-btn-move'),
+  tabDesign: document.getElementById('tab-btn-design'),
+  tabEffect: document.getElementById('tab-btn-effect'),
+  tabText: document.getElementById('tab-btn-text'),
+  
+  secMove: document.getElementById('section-move'),
+  secDesign: document.getElementById('section-design'),
+  secEffect: document.getElementById('section-effect'),
+  secText: document.getElementById('section-text'),
+  
   inputDuration: document.getElementById('input-duration'),
   labelDuration: document.getElementById('label-duration'),
   inputSpeed: document.getElementById('input-speed'),
@@ -168,6 +179,7 @@ const dom = {
   selectDirection: document.getElementById('select-direction'),
   inputHorizontalOffset: document.getElementById('input-horizontal-offset'),
   labelHorizontalOffset: document.getElementById('label-horizontal-offset'),
+  inputScrollReveal: document.getElementById('input-scroll-reveal'),
   
   inputColStart: document.getElementById('input-col-start'),
   inputColStartText: document.getElementById('input-col-start-text'),
@@ -212,6 +224,9 @@ let scene, camera, renderer, planeMesh, gridHelper, glowLight, shadowPlane;
 let ambientLight, dirLight;
 let playAnimFrameId = null;
 
+// Plano de Clipping para Revelação gradual por Scroll
+const scrollRevealClipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 100);
+
 // Gestores de gravação de vídeo
 let isRecording = false;
 let recordedChunks = [];
@@ -237,6 +252,7 @@ function initThreeEngine() {
     preserveDrawingBuffer: true
   });
   renderer.setSize(width, height);
+  renderer.localClippingEnabled = true;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -407,6 +423,10 @@ function rebuild3DPlaneMesh() {
       metalness: 0.1
     });
 
+    if (state.scrollRevealEnabled) {
+      material.clippingPlanes = [ scrollRevealClipPlane ];
+    }
+
     planeMesh = new THREE.Mesh(geometry, material);
     planeMesh.castShadow = true;
     planeMesh.receiveShadow = true;
@@ -555,6 +575,23 @@ function animate() {
     }
   }
 
+  // ANIMAÇÃO DE REVELAÇÃO POR SCROLL
+  if (state.scrollRevealEnabled && planeMesh) {
+    const progress = speedTime % state.duration;
+    const pct = Math.min(progress / state.duration, 1.0);
+    
+    const planeHeight = planeMesh.geometry.parameters ? planeMesh.geometry.parameters.height : 10;
+    const yLimit = (planeHeight / 2) - planeHeight * pct;
+    
+    scrollRevealClipPlane.constant = -yLimit;
+    
+    if (planeMesh.material && !planeMesh.material.clippingPlanes) {
+      planeMesh.material.clippingPlanes = [ scrollRevealClipPlane ];
+    }
+  } else {
+    scrollRevealClipPlane.constant = 100;
+  }
+
   // Aplicação do Deslocamento Horizontal da Perspectiva (0 a 100%) e Direção (Esquerda/Direita)
   const shiftRange = 4.5;
   const shiftFraction = state.perspectiveHorizontalOffset / 100;
@@ -631,6 +668,14 @@ if (dom.inputHorizontalOffset) {
     if (dom.labelHorizontalOffset) {
       dom.labelHorizontalOffset.innerText = `${state.perspectiveHorizontalOffset}%`;
     }
+  });
+}
+
+if (dom.inputScrollReveal) {
+  dom.inputScrollReveal.addEventListener('change', (e) => {
+    state.scrollRevealEnabled = e.target.checked;
+    rebuild3DPlaneMesh();
+    showNotification(state.scrollRevealEnabled ? '✦ Efeito Revelação por Scroll ativado!' : 'Efeito Revelação por Scroll desativado.', 'info');
   });
 }
 
@@ -814,6 +859,11 @@ dom.btnReset.addEventListener('click', () => {
     dom.labelHorizontalOffset.innerText = '50%';
   }
   
+  state.scrollRevealEnabled = false;
+  if (dom.inputScrollReveal) {
+    dom.inputScrollReveal.checked = false;
+  }
+  
   dom.inputColStart.value = '#0d0d15';
   dom.inputColStartText.value = '#0D0D15';
   dom.inputColEnd.value = '#1e1039';
@@ -976,11 +1026,30 @@ dom.btnRenderVideo.addEventListener('click', () => {
 
   try {
     const stream = dom.renderCanvas.captureStream(fps);
-    let options = { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 6000000 };
+    
+    let mimeTypeToUse = 'video/mp4;codecs=h264';
+    if (!MediaRecorder.isTypeSupported(mimeTypeToUse)) {
+      mimeTypeToUse = 'video/mp4;codecs=avc1';
+    }
+    if (!MediaRecorder.isTypeSupported(mimeTypeToUse)) {
+      mimeTypeToUse = 'video/mp4';
+    }
+    if (!MediaRecorder.isTypeSupported(mimeTypeToUse)) {
+      mimeTypeToUse = 'video/webm;codecs=vp9';
+    }
+    if (!MediaRecorder.isTypeSupported(mimeTypeToUse)) {
+      mimeTypeToUse = 'video/webm';
+    }
+
+    let options = { mimeType: mimeTypeToUse, videoBitsPerSecond: 6000000 };
     try {
       mediaRecorder = new MediaRecorder(stream, options);
     } catch (e) {
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      try {
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/mp4' });
+      } catch (e2) {
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      }
     }
 
     mediaRecorder.ondataavailable = (event) => {
@@ -990,15 +1059,15 @@ dom.btnRenderVideo.addEventListener('click', () => {
     };
 
     mediaRecorder.onstop = () => {
-      const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+      const videoBlob = new Blob(recordedChunks, { type: 'video/mp4' });
       const vidUrl = URL.createObjectURL(videoBlob);
       
       dom.modalRecordedVideo.src = vidUrl;
       dom.btnDownloadVideo.href = vidUrl;
-      dom.btnDownloadVideo.download = `Aura3D_Video_${state.preset}.webm`;
+      dom.btnDownloadVideo.download = `Aura3D_Video_${state.preset}.mp4`;
 
       dom.outputVideoModal.classList.remove('hidden');
-      showNotification('Seu vídeo promocional foi gerado com sucesso!', 'success');
+      showNotification('Seu vídeo promocional foi gerado com sucesso em formato MP4!', 'success');
 
       dom.recProgressPanel.classList.add('hidden');
       dom.btnRenderVideo.classList.remove('hidden');
