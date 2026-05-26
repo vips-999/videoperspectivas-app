@@ -1,0 +1,6 @@
+{
+  "name": "Website 3D Video Animator",
+  "description": "Transforme imagens e capturas de tela do seu website em vídeos promocionais 3D cinematográficos de até 30 segundos em diferentes perspectivas e movimentos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
