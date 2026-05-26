@@ -110,6 +110,18 @@ function getPlaceholderWebsiteImage() {
 }
 
 
+// 0. TRAVA DE SEGURANÇA POR SENHA INTELIGENTE
+if (localStorage.getItem('autenticado') !== 'true') {
+  const senha = prompt('Digite a senha de acesso:');
+  if (senha === '999013') {
+    localStorage.setItem('autenticado', 'true');
+  } else {
+    alert('Acesso negado');
+    document.body.innerHTML = '<div style="color: #ef4444; background: #020617; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: sans-serif; gap: 4px;"><div style="font-size: 1.5rem; font-weight: bold;">Acesso Negado</div><div style="font-size: 0.875rem; color: #64748b;">Senha incorreta ou cancelada. Recarregue para tentar novamente.</div></div>';
+    throw new Error('Acesso negado');
+  }
+}
+
 // 1. ESTADO GLOBAL DEFAULT
 const state = {
   imageSrc: getPlaceholderWebsiteImage(),
@@ -144,6 +156,7 @@ const state = {
 // 2. ELEMENTOS DO DOM
 const dom = {
   btnReset: document.getElementById('btn-reset'),
+  btnLogout: document.getElementById('btn-logout'),
   btnGemini: document.getElementById('btn-gemini'),
   geminiBtnText: document.getElementById('gemini-btn-text'),
   notificationBanner: document.getElementById('notification-banner'),
@@ -870,6 +883,14 @@ themePicker.addEventListener('click', (e) => {
 
   rebuild3DPlaneMesh();
 });
+
+// Sair (Logout)
+if (dom.btnLogout) {
+  dom.btnLogout.addEventListener('click', () => {
+    localStorage.removeItem('autenticado');
+    window.location.reload();
+  });
+}
 
 // Resetar aos padrões iniciais
 dom.btnReset.addEventListener('click', () => {
