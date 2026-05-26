@@ -134,6 +134,9 @@ const state = {
   textSubtitle: 'meusite3d.com • Toque para explorar',
   textColor: '#ffffff',
   deviceScale: 1.15,
+  imageWidth: 5.0,
+  imageHeight: 9.0,
+  brightness: 1.0,
   curveAmount: 0.8,
   activeTab: 'move'
 };
@@ -168,6 +171,12 @@ const dom = {
   labelSpeed: document.getElementById('label-speed'),
   inputScale: document.getElementById('input-scale'),
   labelScale: document.getElementById('label-scale'),
+  inputImageWidth: document.getElementById('input-image-width'),
+  labelImageWidth: document.getElementById('label-image-width'),
+  inputImageHeight: document.getElementById('input-image-height'),
+  labelImageHeight: document.getElementById('label-image-height'),
+  inputBrightness: document.getElementById('input-brightness'),
+  labelBrightness: document.getElementById('label-brightness'),
   inputCurve: document.getElementById('input-curve'),
   labelCurve: document.getElementById('label-curve'),
   
@@ -394,15 +403,23 @@ function rebuild3DPlaneMesh() {
   }
 
   createFramedTexture(state.imageSrc, state.browserTheme).then(({ texture, ratio }) => {
-    // Calculo de escala do dispositivo
-    const scale = state.deviceScale;
-    const baseW = 6.8 * scale;
-    const targetH = baseW / ratio;
+    // Lógica de object-fit: contain baseada nos controles de Largura e Altura sem qualquer distorção visual
+    const maxW = state.imageWidth * state.deviceScale;
+    const maxH = state.imageHeight * state.deviceScale;
+    
+    let targetW, targetH;
+    if (maxW / maxH > ratio) {
+      targetH = maxH;
+      targetW = maxH * ratio;
+    } else {
+      targetW = maxW;
+      targetH = maxW / ratio;
+    }
 
     // Garante malha fina e curvada usando PlaneGeometry deformado
     const segmentsX = 2;
     const segmentsY = 64; 
-    const geometry = new THREE.PlaneGeometry(baseW, targetH, segmentsX, segmentsY);
+    const geometry = new THREE.PlaneGeometry(targetW, targetH, segmentsX, segmentsY);
 
     // Deforma os vértices para criar a maravilhosa curvatura isométrica (efeito cinema)
     const pos = geometry.attributes.position;
@@ -422,6 +439,17 @@ function rebuild3DPlaneMesh() {
       roughness: 0.16,
       metalness: 0.1
     });
+
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.brightness = { value: state.brightness };
+      material.userData.shader = shader;
+      
+      shader.fragmentShader = 'uniform float brightness;\n' + shader.fragmentShader;
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <dithering_fragment>',
+        '#include <dithering_fragment>\n    gl_FragColor.rgb *= brightness;'
+      );
+    };
 
     if (state.scrollRevealEnabled) {
       material.clippingPlanes = [ scrollRevealClipPlane ];
@@ -444,6 +472,11 @@ const startTime = Date.now();
 function animate() {
   playAnimFrameId = requestAnimationFrame(animate);
   if (!scene || !camera || !renderer || !planeMesh) return;
+
+  // Atualiza shader uniform de brilho (brightness) em tempo-real na renderização
+  if (planeMesh && planeMesh.material && planeMesh.material.userData && planeMesh.material.userData.shader) {
+    planeMesh.material.userData.shader.uniforms.brightness.value = state.brightness;
+  }
 
   // Controla o tempo dependendo se estamos gravando vídeo em background ou simulando ao vivo
   let t = 0;
@@ -642,6 +675,29 @@ dom.inputScale.addEventListener('input', (e) => {
   dom.labelScale.innerText = `${state.deviceScale.toFixed(2)}x`;
   rebuild3DPlaneMesh();
 });
+if (dom.inputImageWidth) {
+  dom.inputImageWidth.addEventListener('input', (e) => {
+    state.imageWidth = parseFloat(e.target.value);
+    if (dom.labelImageWidth) dom.labelImageWidth.innerText = state.imageWidth.toFixed(1);
+    rebuild3DPlaneMesh();
+  });
+}
+if (dom.inputImageHeight) {
+  dom.inputImageHeight.addEventListener('input', (e) => {
+    state.imageHeight = parseFloat(e.target.value);
+    if (dom.labelImageHeight) dom.labelImageHeight.innerText = state.imageHeight.toFixed(1);
+    rebuild3DPlaneMesh();
+  });
+}
+if (dom.inputBrightness) {
+  dom.inputBrightness.addEventListener('input', (e) => {
+    state.brightness = parseFloat(e.target.value);
+    if (dom.labelBrightness) dom.labelBrightness.innerText = `${state.brightness.toFixed(2)}x`;
+    if (planeMesh && planeMesh.material && planeMesh.material.userData && planeMesh.material.userData.shader) {
+      planeMesh.material.userData.shader.uniforms.brightness.value = state.brightness;
+    }
+  });
+}
 dom.inputCurve.addEventListener('input', (e) => {
   state.curveAmount = parseFloat(e.target.value);
   dom.labelCurve.innerText = `${(state.curveAmount * 100).toFixed(0)}%`;
@@ -834,6 +890,9 @@ dom.btnReset.addEventListener('click', () => {
   state.textSubtitle = 'meusite3d.com • Toque para explorar';
   state.textColor = '#ffffff';
   state.deviceScale = 1.15;
+  state.imageWidth = 5.0;
+  state.imageHeight = 9.0;
+  state.brightness = 1.0;
   state.curveAmount = 0.8;
 
   // Reset inputs
@@ -843,6 +902,24 @@ dom.btnReset.addEventListener('click', () => {
   dom.labelSpeed.innerText = '1.0x';
   dom.inputScale.value = 1.15;
   dom.labelScale.innerText = '1.15x';
+  if (dom.inputImageWidth) {
+    dom.inputImageWidth.value = 5.0;
+  }
+  if (dom.labelImageWidth) {
+    dom.labelImageWidth.innerText = '5.0';
+  }
+  if (dom.inputImageHeight) {
+    dom.inputImageHeight.value = 9.0;
+  }
+  if (dom.labelImageHeight) {
+    dom.labelImageHeight.innerText = '9.0';
+  }
+  if (dom.inputBrightness) {
+    dom.inputBrightness.value = 1.0;
+  }
+  if (dom.labelBrightness) {
+    dom.labelBrightness.innerText = '1.00x';
+  }
   dom.inputCurve.value = 0.8;
   dom.labelCurve.innerText = '80%';
   dom.inputPitch.value = 45;

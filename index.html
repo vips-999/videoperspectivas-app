@@ -276,6 +276,24 @@
                 <input id="input-scale" type="range" min="0.6" max="2.0" step="0.05" value="1.15" class="w-full h-1.5 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
               </div>
 
+              <!-- Largura da Imagem (Ajuste de Proporção Sem Distorção) -->
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-400 font-medium">Largura da Imagem (Máx)</span>
+                  <span id="label-image-width" class="font-mono text-indigo-400 font-bold">5.0</span>
+                </div>
+                <input id="input-image-width" type="range" min="1.0" max="15.0" step="0.1" value="5.0" class="w-full h-1.5 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
+              </div>
+
+              <!-- Altura da Imagem (Ajuste de Proporção Sem Distorção) -->
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-400 font-medium">Altura da Imagem (Máx)</span>
+                  <span id="label-image-height" class="font-mono text-indigo-400 font-bold">9.0</span>
+                </div>
+                <input id="input-image-height" type="range" min="1.0" max="15.0" step="0.1" value="9.0" class="w-full h-1.5 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
+              </div>
+
               <!-- Curvatura do mockup -->
               <div class="space-y-1">
                 <div class="flex items-center justify-between text-xs">
@@ -409,11 +427,26 @@
                 <input id="input-col-glow" type="color" value="#ef4444" class="w-10 h-10 rounded-full border border-white/10 cursor-pointer bg-transparent shrink-0" />
                 <div class="flex-1 space-y-1">
                   <div class="flex justify-between text-xs">
-                    <span class="text-slate-400">Intensidade do Brilho</span>
+                    <span class="text-slate-400">Intensidade do Brilho Traseiro</span>
                     <span id="label-glow-intensity" class="font-mono text-indigo-400">1.5x</span>
                   </div>
                   <input id="input-glow-intensity" type="range" min="0" max="4" step="0.1" value="1.5" class="w-full h-1 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
                 </div>
+              </div>
+            </div>
+
+            <!-- BRILHO DA IMAGEM REAL (BRIGHTNESS VIA UNIFORM SHADER) -->
+            <div class="space-y-3 pt-4 border-t border-white/5">
+              <label class="text-[10px] font-mono tracking-widest text-slate-500 block uppercase">
+                Brilho do Mockup (Brightness)
+              </label>
+
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400 font-medium">Controle de Brilho</span>
+                  <span id="label-brightness" class="font-mono text-indigo-400 font-bold">1.0x</span>
+                </div>
+                <input id="input-brightness" type="range" min="0.1" max="2.5" step="0.05" value="1.0" class="w-full h-1.5 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
               </div>
             </div>
 
@@ -838,6 +871,9 @@
         textSubtitle: 'meusite3d.com • Toque para explorar',
         textColor: '#ffffff',
         deviceScale: 1.15,
+        imageWidth: 5.0,
+        imageHeight: 9.0,
+        brightness: 1.0,
         curveAmount: 0.8,
         activeTab: 'move'
       };
@@ -872,6 +908,12 @@
         labelSpeed: document.getElementById('label-speed'),
         inputScale: document.getElementById('input-scale'),
         labelScale: document.getElementById('label-scale'),
+        inputImageWidth: document.getElementById('input-image-width'),
+        labelImageWidth: document.getElementById('label-image-width'),
+        inputImageHeight: document.getElementById('input-image-height'),
+        labelImageHeight: document.getElementById('label-image-height'),
+        inputBrightness: document.getElementById('input-brightness'),
+        labelBrightness: document.getElementById('label-brightness'),
         inputCurve: document.getElementById('input-curve'),
         labelCurve: document.getElementById('label-curve'),
         
@@ -1146,8 +1188,18 @@
         }
 
         createFramedTexture(state.imageSrc, state.browserTheme).then(({ texture, ratio }) => {
-          const targetW = 5 * state.deviceScale;
-          const targetH = targetW / ratio;
+          // Lógica object-fit: contain para evitar qualquer distorção visual
+          const maxW = state.imageWidth * state.deviceScale;
+          const maxH = state.imageHeight * state.deviceScale;
+          
+          let targetW, targetH;
+          if (maxW / maxH > ratio) {
+            targetH = maxH;
+            targetW = maxH * ratio;
+          } else {
+            targetW = maxW;
+            targetH = maxW / ratio;
+          }
 
           // Cria plano subdividido para podermos curvar
           const segmentsX = 1;
@@ -1168,13 +1220,24 @@
             geometry.computeVertexNormals();
           }
 
-          // Material padrão premium
+          // Material padrão premium com controle direto de brightness no fragment shader
           const material = new THREE.MeshStandardMaterial({
             map: texture,
             side: THREE.DoubleSide,
             roughness: 0.18,
             metalness: 0.1
           });
+
+          material.onBeforeCompile = (shader) => {
+            shader.uniforms.brightness = { value: state.brightness };
+            material.userData.shader = shader;
+            
+            shader.fragmentShader = 'uniform float brightness;\n' + shader.fragmentShader;
+            shader.fragmentShader = shader.fragmentShader.replace(
+              '#include <dithering_fragment>',
+              '#include <dithering_fragment>\n    gl_FragColor.rgb *= brightness;'
+            );
+          };
 
           if (state.scrollRevealEnabled) {
             material.clippingPlanes = [ scrollRevealClipPlane ];
@@ -1197,6 +1260,11 @@
       function animate() {
         playAnimFrameId = requestAnimationFrame(animate);
         if (!scene || !camera || !renderer || !planeMesh) return;
+
+        // Atualiza shader uniform de brilho (brightness) em tempo-real na renderização
+        if (planeMesh && planeMesh.material && planeMesh.material.userData && planeMesh.material.userData.shader) {
+          planeMesh.material.userData.shader.uniforms.brightness.value = state.brightness;
+        }
 
         // Controla o tempo dependendo se estamos gravando vídeo em background ou simulando ao vivo
         let t = 0;
@@ -1410,6 +1478,29 @@
         dom.labelScale.innerText = `${state.deviceScale.toFixed(2)}x`;
         rebuild3DPlaneMesh();
       });
+      if (dom.inputImageWidth) {
+        dom.inputImageWidth.addEventListener('input', (e) => {
+          state.imageWidth = parseFloat(e.target.value);
+          if (dom.labelImageWidth) dom.labelImageWidth.innerText = state.imageWidth.toFixed(1);
+          rebuild3DPlaneMesh();
+        });
+      }
+      if (dom.inputImageHeight) {
+        dom.inputImageHeight.addEventListener('input', (e) => {
+          state.imageHeight = parseFloat(e.target.value);
+          if (dom.labelImageHeight) dom.labelImageHeight.innerText = state.imageHeight.toFixed(1);
+          rebuild3DPlaneMesh();
+        });
+      }
+      if (dom.inputBrightness) {
+        dom.inputBrightness.addEventListener('input', (e) => {
+          state.brightness = parseFloat(e.target.value);
+          if (dom.labelBrightness) dom.labelBrightness.innerText = `${state.brightness.toFixed(2)}x`;
+          if (planeMesh && planeMesh.material && planeMesh.material.userData && planeMesh.material.userData.shader) {
+            planeMesh.material.userData.shader.uniforms.brightness.value = state.brightness;
+          }
+        });
+      }
       dom.inputCurve.addEventListener('input', (e) => {
         state.curveAmount = parseFloat(e.target.value);
         dom.labelCurve.innerText = `${(state.curveAmount * 100).toFixed(0)}%`;
@@ -1602,6 +1693,9 @@
         state.textSubtitle = 'meusite3d.com • Toque para explorar';
         state.textColor = '#ffffff';
         state.deviceScale = 1.15;
+        state.imageWidth = 5.0;
+        state.imageHeight = 9.0;
+        state.brightness = 1.0;
         state.curveAmount = 0.8;
 
         // Reset inputs
@@ -1611,6 +1705,24 @@
         dom.labelSpeed.innerText = '1.0x';
         dom.inputScale.value = 1.15;
         dom.labelScale.innerText = '1.15x';
+        if (dom.inputImageWidth) {
+          dom.inputImageWidth.value = 5.0;
+        }
+        if (dom.labelImageWidth) {
+          dom.labelImageWidth.innerText = '5.0';
+        }
+        if (dom.inputImageHeight) {
+          dom.inputImageHeight.value = 9.0;
+        }
+        if (dom.labelImageHeight) {
+          dom.labelImageHeight.innerText = '9.0';
+        }
+        if (dom.inputBrightness) {
+          dom.inputBrightness.value = 1.0;
+        }
+        if (dom.labelBrightness) {
+          dom.labelBrightness.innerText = '1.00x';
+        }
         dom.inputCurve.value = 0.8;
         dom.labelCurve.innerText = '80%';
         dom.inputPitch.value = 45;
