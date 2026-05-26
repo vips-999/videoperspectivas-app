@@ -45,6 +45,24 @@
         height: 6px;
         border-radius: 999px;
       }
+      
+      /* Aumentar em 30% toda propriedade font-size de texto e botões */
+      body, p, span, h1, h2, h3, h4, option, select, label {
+        font-size: 1.05em;
+      }
+      button, .btn, button span, a span {
+        font-size: 1.3em !important;
+      }
+      .text-\[9px\] { font-size: calc(9px * 1.3) !important; }
+      .text-\[10px\] { font-size: calc(10px * 1.3) !important; }
+      .text-\[11px\] { font-size: calc(11px * 1.3) !important; }
+      .text-xs { font-size: calc(0.75rem * 1.3) !important; }
+      .text-sm { font-size: calc(0.875rem * 1.3) !important; }
+      .text-md { font-size: calc(1rem * 1.3) !important; }
+      .text-base { font-size: calc(1rem * 1.3) !important; }
+      .text-lg { font-size: calc(1.125rem * 1.3) !important; }
+      .text-xl { font-size: calc(1.25rem * 1.3) !important; }
+      .text-2xl { font-size: calc(1.5rem * 1.3) !important; }
     </style>
   </head>
   <body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col overflow-x-hidden select-none">
@@ -288,6 +306,26 @@
                   </div>
                   <input id="input-roll" type="range" min="-45" max="45" step="1" value="15" class="w-full h-1 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
                 </div>
+
+                <!-- Seletor Direção (Esquerda/Direita) -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                    <span>Direção da Perspectiva</span>
+                  </div>
+                  <select id="select-direction" class="w-full bg-slate-900 border border-white/10 text-xs px-2 py-1.5 rounded text-slate-200">
+                    <option value="esquerda">Esquerda</option>
+                    <option value="direita" selected>Direita</option>
+                  </select>
+                </div>
+
+                <!-- Deslocamento Horizontal perspective slider -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Deslocamento Horizontal da Perspectiva</span>
+                    <span id="label-horizontal-offset" class="font-mono">50%</span>
+                  </div>
+                  <input id="input-horizontal-offset" type="range" min="0" max="100" step="1" value="50" class="w-full h-1 bg-slate-800 rounded accent-indigo-500 cursor-pointer" />
+                </div>
               </div>
             </div>
           </div>
@@ -474,7 +512,7 @@
           <div class="flex items-center gap-1.5 bg-slate-900 p-1 rounded-lg border border-white/5" id="social-aspect-picker">
             <button data-ratio="16:9" class="aspect-btn px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer text-slate-400 hover:text-slate-200" title="16:9 YouTube / Desktops">
               <i data-lucide="tv" class="w-3.5 h-3.5"></i>
-              <span class="hidden md:inline">Widescreen</span>
+              <span class="hidden md:inline">Widescreen (16:9)</span>
             </button>
             <button data-ratio="9:16" class="aspect-btn px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer bg-indigo-500 text-white shadow-md" title="9:16 Instagram Reels / TikTok">
               <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
@@ -744,6 +782,8 @@
         cameraDistance: 11,
         cameraPitch: 45,
         cameraRoll: 15,
+        perspectiveDirection: 'direita',
+        perspectiveHorizontalOffset: 50,
         animationSpeed: 1.0,
         textOverlay: '🚀 LANDING PAGE LIVE!',
         textSubtitle: 'meusite3d.com • Toque para explorar',
@@ -789,6 +829,9 @@
         labelPitch: document.getElementById('label-pitch'),
         inputRoll: document.getElementById('input-roll'),
         labelRoll: document.getElementById('label-roll'),
+        selectDirection: document.getElementById('select-direction'),
+        inputHorizontalOffset: document.getElementById('input-horizontal-offset'),
+        labelHorizontalOffset: document.getElementById('label-horizontal-offset'),
         
         inputColStart: document.getElementById('input-col-start'),
         inputColStartText: document.getElementById('input-col-start-text'),
@@ -1125,6 +1168,8 @@
         const computedRoll = state.cameraRoll * Math.PI / 180;
 
         // APLICAÇÃO DOS FAMOSOS PRESETS CINEMATOGRÁFICOS DE CÂMERA
+        let lookAtTarget = new THREE.Vector3(0, 0, 0);
+
         switch (state.preset) {
           case 'scroll': {
             // Rolagem infinita do topo para a base
@@ -1135,10 +1180,9 @@
             const endY = -targetHeight / 2 + 2;
             const currentY = startY + (endY - startY) * pct;
 
-            const lookAtTarget = new THREE.Vector3(0, currentY, 0);
+            lookAtTarget = new THREE.Vector3(0, currentY, 0);
             const cameraAngle = -35 * Math.PI / 180;
             camera.position.set(2, currentY + baseDistance * Math.sin(-cameraAngle), baseDistance * Math.cos(-cameraAngle));
-            camera.lookAt(lookAtTarget);
 
             mainGroup.rotation.y = 0.22 + (Math.sin(t * 0.4) * 0.04);
             break;
@@ -1152,7 +1196,7 @@
               Math.sin(t * 0.5) * (baseDistance * 0.15) + 1,
               Math.cos(angle) * baseDistance
             );
-            camera.lookAt(0, 0, 0);
+            lookAtTarget = new THREE.Vector3(0, 0, 0);
             break;
           }
 
@@ -1163,7 +1207,7 @@
             const zoomAmount = baseDistance - (baseDistance * 0.45 * easing);
 
             camera.position.set(1.5, 1, zoomAmount);
-            camera.lookAt(0, -targetHeight * 0.12 * easing, 0);
+            lookAtTarget = new THREE.Vector3(0, -targetHeight * 0.12 * easing, 0);
 
             mainGroup.rotation.y = computedPitch + 0.1;
             break;
@@ -1179,7 +1223,7 @@
             mainGroup.rotation.z = Math.sin(speedTime * 0.4) * 0.03;
 
             camera.position.set(0, 0.4, baseDistance);
-            camera.lookAt(0, 0, 0);
+            lookAtTarget = new THREE.Vector3(0, 0, 0);
             break;
           }
 
@@ -1193,10 +1237,9 @@
 
             const startLook = new THREE.Vector3(-1.5, targetHeight * 0.3, 0);
             const endLook = new THREE.Vector3(0, 0, 0);
-            const curLook = startLook.clone().lerp(endLook, ease);
+            lookAtTarget = startLook.clone().lerp(endLook, ease);
 
             camera.position.set(0, 0.4, curD);
-            camera.lookAt(curLook);
 
             mainGroup.rotation.y = 0.52 * ease;
             mainGroup.rotation.x = 0.2 * ease;
@@ -1206,7 +1249,7 @@
           case 'manual': {
             // Controle livre
             camera.position.set(0, 0, baseDistance);
-            camera.lookAt(0, 0, 0);
+            lookAtTarget = new THREE.Vector3(0, 0, 0);
 
             mainGroup.rotation.y = computedPitch;
             mainGroup.rotation.z = computedRoll;
@@ -1214,6 +1257,15 @@
             break;
           }
         }
+
+        // Aplicação do Deslocamento Horizontal da Perspectiva (0 a 100%) e Direção (Esquerda/Direita)
+        const shiftRange = 4.5; // Escopo de deslocamento horizontal
+        const shiftFraction = state.perspectiveHorizontalOffset / 100;
+        const shiftX = (state.perspectiveDirection === 'esquerda' ? -1 : 1) * shiftFraction * shiftRange;
+
+        camera.position.x += shiftX;
+        lookAtTarget.x += shiftX;
+        camera.lookAt(lookAtTarget);
 
         // Renderiza
         renderer.render(scene, camera);
@@ -1277,7 +1329,7 @@
         rebuild3DPlaneMesh();
       });
 
-      // Rotação Manual
+      // Rotação Manual & Deslocamento de Perspectiva
       dom.inputPitch.addEventListener('input', (e) => {
         state.cameraPitch = parseInt(e.target.value);
         dom.labelPitch.innerText = `${state.cameraPitch}°`;
@@ -1286,6 +1338,19 @@
         state.cameraRoll = parseInt(e.target.value);
         dom.labelRoll.innerText = `${state.cameraRoll}°`;
       });
+      if (dom.selectDirection) {
+        dom.selectDirection.addEventListener('change', (e) => {
+          state.perspectiveDirection = e.target.value;
+        });
+      }
+      if (dom.inputHorizontalOffset) {
+        dom.inputHorizontalOffset.addEventListener('input', (e) => {
+          state.perspectiveHorizontalOffset = parseInt(e.target.value);
+          if (dom.labelHorizontalOffset) {
+            dom.labelHorizontalOffset.innerText = `${state.perspectiveHorizontalOffset}%`;
+          }
+        });
+      }
 
       // Cores do Fundo
       dom.inputColStart.addEventListener('input', (e) => {
@@ -1435,6 +1500,8 @@
         state.glowIntensity = 1.5;
         state.cameraPitch = 45;
         state.cameraRoll = 15;
+        state.perspectiveDirection = 'direita';
+        state.perspectiveHorizontalOffset = 50;
         state.animationSpeed = 1.0;
         state.textOverlay = '🚀 LANDING PAGE LIVE!';
         state.textSubtitle = 'meusite3d.com • Toque para explorar';
@@ -1455,6 +1522,15 @@
         dom.labelPitch.innerText = '45°';
         dom.inputRoll.value = 15;
         dom.labelRoll.innerText = '15°';
+        if (dom.selectDirection) {
+          dom.selectDirection.value = 'direita';
+        }
+        if (dom.inputHorizontalOffset) {
+          dom.inputHorizontalOffset.value = 50;
+        }
+        if (dom.labelHorizontalOffset) {
+          dom.labelHorizontalOffset.innerText = '50%';
+        }
         
         dom.inputColStart.value = '#0d0d15';
         dom.inputColStartText.value = '#0D0D15';
